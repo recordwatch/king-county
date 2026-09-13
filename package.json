@@ -1,0 +1,12 @@
+{
+  "type": "module",
+  "name": "king-county-jail-roster",
+  "version": "1.0.0",
+  "scripts": {
+    "start": "node scrape.js all"
+  },
+  "dependencies": {
+    "axios": "^1.7.2",
+    "cheerio": "^1.0.0"
+  }
+}

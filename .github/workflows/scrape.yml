@@ -1,0 +1,60 @@
+name: Scrape & Deploy (Live Sources)
+
+# SCORE, Kent, and Kirkland all run true live "who's in custody right now"
+# rosters — polled every 30 min like every sibling county monitor. King
+# County DAJD is a separate, slower-cadence workflow (see scrape-kcdajd.yml)
+# since its Open Data feed only refreshes every few days.
+on:
+  schedule:
+    - cron: '*/30 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  scrape-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install scraper dependencies
+        run: npm install
+
+      - name: Run scrapers
+        run: node scrape.js all
+
+      - name: Copy data to frontend public
+        run: |
+          mkdir -p frontend/public/data
+          cp -r data/* frontend/public/data/
+
+      - name: Install frontend dependencies
+        run: cd frontend && npm install
+
+      - name: Build frontend
+        run: cd frontend && npm run build
+
+      - name: Commit data files
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add data/score data/kent data/kirkland
+          git diff --cached --quiet || git commit -m "chore: update live roster data [skip ci]"
+          git pull --no-rebase -X ours
+          git push
+
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./frontend/dist

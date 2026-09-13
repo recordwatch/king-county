@@ -1,0 +1,403 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500&family=Playfair+Display:wght@700&display=swap');
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'Inter', sans-serif;
+  background: #14181C;
+  color: #E8E6DE;
+  min-height: 100vh;
+}
+
+.app {
+  max-width: 860px;
+  margin: 0 auto;
+  padding: 0 1rem 3rem;
+}
+
+.header {
+  background: #0D1013;
+  margin: 0 -1rem;
+  padding: 1.5rem 2rem;
+  border-bottom: 4px solid #C9A227;
+  margin-bottom: 0;
+}
+.header-inner { display: flex; align-items: baseline; justify-content: space-between; }
+.header-county { font-family: 'Inter', sans-serif; color: #8B9298; font-size: 0.7rem; letter-spacing: 0.12em; text-transform: uppercase; display: block; margin-bottom: 0.25rem; }
+.header h1 { font-family: 'Playfair Display', serif; color: #E8E6DE; font-size: 2.5rem; font-weight: 700; letter-spacing: 0.02em; line-height: 1; }
+.header-sub { font-family: 'Inter', sans-serif; color: #8B9298; font-size: 0.65rem; letter-spacing: 0.08em; text-transform: uppercase; }
+
+.statbar {
+  background: #C9A227;
+  margin: 0 -1rem 2rem;
+  padding: 0.6rem 2rem 0.75rem;
+}
+.statbar-top { display: flex; gap: 2rem; margin-bottom: 0.5rem; }
+.stat-num { color: #1A1607; font-size: 1.1rem; font-weight: 700; }
+.stat-label { color: #3A2F0C; font-size: 0.6rem; text-transform: uppercase; letter-spacing: 0.08em; opacity: 0.85; }
+
+.statbar-sources {
+  display: flex;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+  border-top: 1px solid rgba(26, 22, 7, 0.25);
+  padding-top: 0.5rem;
+}
+.source-stat { display: flex; flex-direction: column; }
+.source-stat-label { font-size: 0.6rem; text-transform: uppercase; letter-spacing: 0.07em; color: #3A2F0C; }
+.source-stat-num { font-family: 'Playfair Display', serif; font-size: 1rem; color: #1A1607; }
+.source-stat-cadence { font-size: 0.55rem; color: #4A3D10; max-width: 180px; line-height: 1.3; }
+
+.controls {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+}
+@media (max-width: 600px) {
+  .controls {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .search-input, .source-select {
+    width: 100%;
+    min-width: unset;
+  }
+  .filter-tabs {
+    flex-wrap: wrap;
+  }
+  .filter-tabs a, .filter-tabs button {
+    flex: 1 1 auto;
+    text-align: center;
+  }
+}
+.search-input, .source-select {
+  flex: 1;
+  min-width: 160px;
+  background: #1D2226;
+  border: 1px solid #3A4046;
+  padding: 0.5rem 0.75rem;
+  font-family: 'Inter', sans-serif;
+  font-size: 0.85rem;
+  color: #E8E6DE;
+  outline: none;
+}
+.search-input::placeholder { color: #8B9298; }
+.search-input:focus, .source-select:focus { border-color: #C9A227; }
+.filter-tabs { display: flex; gap: 0.5rem; }
+.filter-tabs a, .filter-tabs button {
+  background: #1D2226;
+  border: 1px solid #3A4046;
+  padding: 0.4rem 0.9rem;
+  font-family: 'Playfair Display', serif;
+  font-size: 0.85rem;
+  color: #C9B98F;
+  cursor: pointer;
+  text-decoration: none;
+  display: inline-block;
+}
+.filter-tabs a.active, .filter-tabs button.active {
+  background: #C9A227;
+  color: #1A1607;
+  border-color: #C9A227;
+}
+
+.date-separator {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: #E0B94D;
+  padding: 0.5rem 0 0.5rem;
+  margin-top: 1.25rem;
+  border-bottom: 1px solid #2A2E32;
+  margin-bottom: 0.75rem;
+}
+
+.log-count {
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: #8B9298;
+  margin-bottom: 0.75rem;
+}
+.empty, .loading {
+  text-align: center;
+  color: #8B9298;
+  font-size: 0.85rem;
+  padding: 3rem;
+}
+
+.card {
+  border: 1px solid #3A4046;
+  margin-bottom: 0.5rem;
+  background: #1D2226;
+}
+.card-released { opacity: 0.6; }
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem 1rem;
+  cursor: pointer;
+  gap: 1rem;
+}
+.card-header:hover { background: #24292E; }
+.card-name { font-family: 'Playfair Display', serif; font-size: 1.1rem; color: #E8E6DE; margin-bottom: 0.2rem; display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
+.source-badge {
+  font-family: 'Inter', sans-serif;
+  font-size: 0.55rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #E0B94D;
+  border: 1px solid #4A3D10;
+  background: #262010;
+  padding: 0.1rem 0.4rem;
+  border-radius: 2px;
+}
+.card-meta { font-size: 0.65rem; color: #8B9298; text-transform: uppercase; letter-spacing: 0.07em; }
+.card-right { display: flex; align-items: center; gap: 0.75rem; flex-shrink: 0; }
+.card-toggle { color: #8B9298; font-size: 0.7rem; }
+
+.badge {
+  font-size: 0.55rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  padding: 0.2rem 0.5rem;
+  border: 1px solid;
+}
+.badge-custody { background: #3A2F0C; border-color: #C9A227; color: #F0D998; }
+.badge-released { background: #1D2226; border-color: #3A4046; color: #8B9298; }
+
+.card-body { padding: 0 1rem 1rem; border-top: 1px solid #3A4046; }
+.card-release-row {
+  font-size: 0.75rem;
+  color: #8B9298;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid #2A2E32;
+  margin-bottom: 0.75rem;
+}
+
+.charges-title {
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: #8B9298;
+  margin-bottom: 0.5rem;
+  border-top: 1px solid #2A2E32;
+  padding-top: 0.75rem;
+}
+.charge-row {
+  padding: 0.5rem 0;
+  border-bottom: 1px solid #2A2E32;
+}
+.charge-row:last-child { border-bottom: none; }
+.charge-violation { font-size: 0.8rem; color: #E8E6DE; margin-bottom: 0.2rem; }
+.charge-pending { font-size: 0.75rem; color: #8B9298; font-style: italic; }
+.card-time-held { color: #E0B94D; }
+.card-time-held-detail { color: #E0B94D; }
+.charge-bail, .charge-court, .charge-agency, .charge-disposition {
+  font-size: 0.68rem;
+  color: #8B9298;
+  margin-top: 0.15rem;
+}
+
+/* History Log */
+.history-log {
+  background: #1D2226;
+  border: 1px solid #3A4046;
+  padding: 1.5rem;
+}
+.history-header {
+  text-align: center;
+  margin-bottom: 2rem;
+  padding-bottom: 1rem;
+  border-bottom: 2px solid #3A4046;
+}
+.history-header h2 {
+  font-size: 1.3rem;
+  color: #E8E6DE;
+  margin: 0.5rem 0;
+}
+.history-subtitle {
+  font-size: 0.75rem;
+  color: #8B9298;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.back-link {
+  display: inline-block;
+  font-family: 'Playfair Display', serif;
+  font-size: 0.8rem;
+  color: #8B9298;
+  text-decoration: none;
+  margin-bottom: 0.5rem;
+}
+.back-link:hover { color: #E8E6DE; }
+
+/* Stats page */
+.stats-tabs {
+  display: flex;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+  margin-bottom: 1.5rem;
+  border-bottom: 1px solid #3A4046;
+  padding-bottom: 1rem;
+}
+.stats-tabs button {
+  background: #1D2226;
+  border: 1px solid #3A4046;
+  padding: 0.4rem 0.85rem;
+  font-family: 'Playfair Display', serif;
+  font-size: 0.8rem;
+  color: #C9B98F;
+  cursor: pointer;
+}
+.stats-tabs button.active {
+  background: #C9A227;
+  color: #1A1607;
+  border-color: #C9A227;
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 0.75rem;
+  margin-bottom: 2rem;
+}
+.stat-card {
+  background: #1D2226;
+  border: 1px solid #3A4046;
+  padding: 0.9rem 1rem;
+}
+.stat-card-num { font-family: 'Playfair Display', serif; font-size: 1.6rem; color: #E8E6DE; line-height: 1.1; }
+.stat-card-label { font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.08em; color: #8B9298; margin-top: 0.3rem; }
+.stat-card-sub { font-size: 0.65rem; color: #E0B94D; margin-top: 0.2rem; }
+
+.section-title {
+  font-family: 'Playfair Display', serif;
+  font-size: 1rem;
+  color: #E8E6DE;
+  margin: 1.75rem 0 0.4rem;
+  padding-bottom: 0.4rem;
+  border-bottom: 1px solid #2A2E32;
+}
+.section-note {
+  font-size: 0.72rem;
+  color: #8B9298;
+  margin-bottom: 0.75rem;
+  line-height: 1.4;
+}
+
+.hbar-list { margin-bottom: 0.5rem; }
+.hbar-row {
+  display: grid;
+  grid-template-columns: 160px 1fr 90px;
+  align-items: center;
+  gap: 0.6rem;
+  margin-bottom: 0.4rem;
+}
+.hbar-label { font-size: 0.75rem; color: #C9B98F; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hbar-track { background: #1D2226; border: 1px solid #2A2E32; height: 0.9rem; }
+.hbar-fill { background: #C9A227; height: 100%; }
+.hbar-value { font-size: 0.72rem; color: #8B9298; text-align: right; }
+.hbar-pct { color: #5A6066; }
+@media (max-width: 600px) {
+  .hbar-row { grid-template-columns: 100px 1fr 70px; }
+}
+
+.stats-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 1.5rem;
+  font-size: 0.75rem;
+}
+.stats-table th, .stats-table td {
+  text-align: left;
+  padding: 0.4rem 0.6rem;
+  border-bottom: 1px solid #2A2E32;
+  color: #C9B98F;
+}
+.stats-table th {
+  color: #8B9298;
+  text-transform: uppercase;
+  font-size: 0.62rem;
+  letter-spacing: 0.06em;
+  font-weight: 400;
+}
+
+.agency-block { padding: 0.75rem 0; border-bottom: 1px solid #2A2E32; }
+.agency-name { font-family: 'Playfair Display', serif; font-size: 0.9rem; color: #E8E6DE; }
+.agency-meta { font-size: 0.65rem; color: #8B9298; margin: 0.2rem 0 0.4rem; text-transform: uppercase; letter-spacing: 0.06em; }
+.agency-top-charges { list-style: none; padding: 0; margin: 0; font-size: 0.75rem; color: #C9B98F; }
+.agency-top-charges li { padding: 0.15rem 0; }
+
+.history-day {
+  margin-bottom: 2rem;
+  padding-bottom: 1.5rem;
+  border-bottom: 1px solid #2A2E32;
+}
+.history-day:last-child {
+  border-bottom: none;
+}
+.history-date {
+  font-size: 0.9rem;
+  font-weight: bold;
+  color: #E8E6DE;
+  margin-bottom: 1rem;
+  padding: 0.3rem 0.75rem;
+  background: #14181C;
+  display: inline-block;
+}
+.history-section {
+  margin-bottom: 1.5rem;
+}
+.history-section:last-child {
+  margin-bottom: 0;
+}
+.history-section-title {
+  font-size: 0.7rem;
+  font-weight: bold;
+  color: #E0B94D;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin-bottom: 0.75rem;
+  padding-left: 0.5rem;
+  border-left: 3px solid #E0B94D;
+}
+.history-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.history-item {
+  padding: 0.5rem 0.75rem;
+  margin-bottom: 0.5rem;
+  background: #22261F;
+  border-left: 2px solid #3A4046;
+}
+.history-item:hover {
+  background: #24292E;
+}
+.history-name {
+  display: block;
+  font-family: 'Playfair Display', serif;
+  font-size: 1rem;
+  color: #E8E6DE;
+  margin-bottom: 0.25rem;
+}
+.history-meta {
+  display: block;
+  font-size: 0.72rem;
+  color: #8B9298;
+}
+.history-time-served {
+  color: #E0B94D;
+  font-weight: 500;
+}
+.history-charges {
+  display: block;
+  margin-top: 0.25rem;
+  color: #C9B98F;
+  font-style: italic;
+}
