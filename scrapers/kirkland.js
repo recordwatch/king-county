@@ -19,8 +19,20 @@ function cleanText(s) {
 
 // bookingNumber -> internal detail-page id (e.g. "-45140"), populated by
 // scrapeRoster() and consumed by scrapeDetailBatch() within the same run —
-// the roster list page is the only place this internal id is exposed.
+// the roster list page is the only place this internal id is exposed. Also
+// persisted onto each roster entry's `detailId` field by runScraper.js, so
+// backfill can still resolve it once a booking scrolls off Kirkland's small
+// ~15-30 row rolling window and stops appearing in this cache.
 const detailIdCache = new Map();
+
+function parseKirklandDate(s) {
+  if (!s) return null;
+  // "MM/DD/YYYY HH:mm" -- JS Date parses this US format natively, no
+  // reformatting needed (an earlier version mangled it into an invalid
+  // pseudo-ISO string here, which silently broke every comparison).
+  const d = new Date(s);
+  return isNaN(d.getTime()) ? null : d;
+}
 
 export async function scrapeRoster() {
   const res = await axios.get(ROSTER_URL, { headers: HEADERS, timeout: 30000 });
@@ -40,10 +52,18 @@ export async function scrapeRoster() {
     const facility = cleanText($(cells[1]).text());
     const bookingDate = cleanText($(cells[2]).text());
     const bookingNumber = cleanText($(cells[3]).text());
-    const releaseDate = cleanText($(cells[4]).text());
+    const releaseDateStr = cleanText($(cells[4]).text());
     if (!bookingNumber) return;
 
     detailIdCache.set(bookingNumber, idMatch[1]);
+
+    // The "Release Date" column is overloaded: it can hold either an actual
+    // past release timestamp, OR a scheduled/projected release date for
+    // someone still serving time (confirmed live — most populated values
+    // are weeks in the future). Only treat it as a real release if it's not
+    // in the future; otherwise it's just informational.
+    const releaseDate = parseKirklandDate(releaseDateStr);
+    const isPastRelease = releaseDate && releaseDate.getTime() <= Date.now();
 
     inmates.push({
       idnum: bookingNumber,
@@ -51,8 +71,10 @@ export async function scrapeRoster() {
       name,
       facility: facility || 'KPD Jail',
       bookingDate,
-      status: releaseDate ? 'released' : 'in_custody',
-      releasedAt: releaseDate || null,
+      detailId: idMatch[1],
+      status: isPastRelease ? 'released' : 'in_custody',
+      releasedAt: isPastRelease ? releaseDateStr : null,
+      scheduledReleaseDate: !isPastRelease && releaseDateStr ? releaseDateStr : null,
       charges: [],
     });
   });
@@ -98,13 +120,17 @@ function parseDetail(html) {
     }
   }
 
-  return { charges };
+  // "complete" means we got a real, formally-filed charge description, not
+  // just the bail placeholder — until then, keep retrying on future runs
+  // instead of freezing empty/placeholder data in forever.
+  const complete = charges.some(c => c.charge !== 'Charge pending');
+  return { charges, complete };
 }
 
-export async function scrapeDetailBatch(bookingNumbers) {
+export async function scrapeDetailBatch(bookingNumbers, { roster } = {}) {
   const results = {};
   for (const bookingNumber of bookingNumbers) {
-    const detailId = detailIdCache.get(bookingNumber);
+    const detailId = detailIdCache.get(bookingNumber) || roster?.[bookingNumber]?.detailId;
     if (!detailId) continue;
     try {
       const res = await axios.get(`${BASE_URL}/jailregister/BookingDetail/${detailId}`, { headers: HEADERS, timeout: 20000 });

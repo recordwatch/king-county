@@ -16,7 +16,10 @@ const SOURCES = {
     label: 'SCORE',
     dataDir: path.join(DATA_DIR, 'score'),
     fetchRoster: score.scrapeRoster,
-    // No detail fetch — SCORE's public portal doesn't publish charges at all.
+    fetchDetailBatch: score.scrapeDetailBatch,
+    detailBatchLimit: 40,
+    backfillBatch: 50,
+    fetchReleaseTimes: score.fetchReleaseTimes,
   },
   kent: {
     sourceId: 'kent',

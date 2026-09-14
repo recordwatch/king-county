@@ -50,6 +50,12 @@ export default function BookingCard({ entry }) {
             </div>
           )}
 
+          {!isReleased && entry.scheduledReleaseDate && (
+            <div className="card-release-row">
+              Scheduled release: {entry.scheduledReleaseDate}
+            </div>
+          )}
+
           {entry.charges && entry.charges.length > 0 ? (
             <div className="card-charges">
               <div className="charges-title">Charges ({entry.charges.length})</div>
@@ -71,9 +77,7 @@ export default function BookingCard({ entry }) {
             <div className="card-charges">
               <div className="charges-title">Charges</div>
               <div className="charge-row charge-pending">
-                {entry.source === 'score'
-                  ? "Not published — SCORE's public lookup doesn't list charge information, only custody status."
-                  : 'Not yet available — check back shortly.'}
+                Not yet available — check back shortly.
               </div>
             </div>
           )}

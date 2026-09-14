@@ -91,6 +91,7 @@ export default function HistoryLog({ entries, search = '' }) {
                       <span className="history-name">{entry.name}</span>
                       <span className="history-meta">
                         Booked: {formatTime(entry.bookingDate || entry.firstSeen)}
+                        {entry.facility && <span> | {entry.facility}</span>}
                         {entry.charges && entry.charges.length > 0 && (
                           <span className="history-charges"> | Charges: {entry.charges.map(c => c.charge).filter(Boolean).join(', ')}</span>
                         )}
@@ -112,6 +113,7 @@ export default function HistoryLog({ entries, search = '' }) {
                         <span className="history-name">{entry.name}</span>
                         <span className="history-meta">
                           Released: {formatTime(entry.releasedAt)}
+                          {entry.facility && <span> | {entry.facility}</span>}
                           {timeServed && (
                             <span className="history-time-served"> | Time served: {timeServed}</span>
                           )}

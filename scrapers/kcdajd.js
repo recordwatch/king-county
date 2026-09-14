@@ -9,8 +9,10 @@ import axios from 'axios';
 // title/date-range gets renamed every year.
 const RESOURCE_URL = 'https://data.kingcounty.gov/resource/j56h-zgnm.json';
 
-// This dataset doesn't carry a facility column (KCCF vs MRJC isn't broken
-// out), so every King County DAJD entry is labeled generically.
+// Fallback label for rows where `current_facility` is blank (most rows,
+// confirmed live -- ~31k of ~40k don't have it populated). When present it
+// distinguishes King County Correctional Facility, Maleng Regional Justice
+// Center, Community Correction Division, and Electronic Home Detention.
 const FACILITY_LABEL = 'King County DAJD (KCCF/MRJC)';
 
 // Pull a rolling window rather than the full ~13-month/40k-row history —
@@ -75,11 +77,13 @@ export async function scrapeRoster() {
       ? null
       : chargeRows.reduce((latest, r) => (!latest || r.release_date_time > latest ? r.release_date_time : latest), null);
 
+    const facilityRow = chargeRows.find(r => r.current_facility);
+
     bookings.push({
       idnum: id,
       bookingNumber: id,
       name: formatName(chargeRows[0]),
-      facility: FACILITY_LABEL,
+      facility: facilityRow ? facilityRow.current_facility : FACILITY_LABEL,
       bookingDate: chargeRows.reduce((min, r) => (r.booking_date_time < min ? r.booking_date_time : min), chargeRows[0].booking_date_time),
       status: stillOpen ? 'in_custody' : 'released',
       releasedAt,
