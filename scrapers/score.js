@@ -112,10 +112,29 @@ export async function scrapeDetailBatch(nameNumbers) {
   return results;
 }
 
+// The per-person view page's "Booking List" section has a "Release Type"
+// column (e.g. "RELEASED - COURT ORDER", "RELEASED - SENTENCE COMPLETED",
+// "PERSONAL RECOGNIZANCE") that /recentreleases itself doesn't expose --
+// used by the WA DOC cross-reference to skip obvious non-transfers.
+function parseBookingList($) {
+  const rows = [];
+  $('h1').filter((_, el) => cleanText($(el).text()) === 'Booking List').each((_, h1) => {
+    for (const f of parsePanels($, $(h1).next('.list'))) {
+      if (!f['booking number']) continue;
+      rows.push({ bookingNumber: f['booking number'], releaseType: f['release type'] || null });
+    }
+  });
+  return rows;
+}
+
 // SCORE's own /recentreleases feed publishes the authoritative release
 // timestamp for each booking -- using it instead of our own scrape-detection
-// time avoids up to 30 min of error from polling cadence alone.
-export async function fetchReleaseTimes() {
+// time avoids up to 30 min of error from polling cadence alone. Also looks
+// up the release reason (Booking List's "Release Type") for just the ids
+// that were actually released this run, since /recentreleases itself
+// doesn't have that column -- one extra request per release, not per person
+// in custody, so volume stays low.
+export async function fetchReleaseTimes(releasedIds = []) {
   const res = await axios.get(RECENT_RELEASES_URL, { headers: HEADERS, timeout: 30000 });
   if (isUpdatingPlaceholder(res.data)) return {};
   const $ = cheerio.load(res.data);
@@ -125,7 +144,22 @@ export async function fetchReleaseTimes() {
     const nameNumber = fields['name number'];
     const dateReleased = fields['date released'];
     if (!nameNumber || !dateReleased || dateReleased === 'In SCORE Custody') continue;
-    releaseTimes[nameNumber] = dateReleased;
+    releaseTimes[nameNumber] = { releasedAt: dateReleased, bookingNumber: fields['booking number'] };
   }
+
+  for (const nn of releasedIds) {
+    const info = releaseTimes[nn];
+    if (!info) continue;
+    try {
+      const res2 = await axios.post(VIEW_URL, new URLSearchParams({ nn }), { headers: HEADERS, timeout: 20000 });
+      if (isUpdatingPlaceholder(res2.data)) continue;
+      const $2 = cheerio.load(res2.data);
+      const match = parseBookingList($2).find(b => b.bookingNumber === info.bookingNumber);
+      if (match) info.releaseReason = match.releaseType;
+    } catch (err) {
+      console.warn(`  Release-reason fetch failed for nn=${nn}:`, err.message);
+    }
+  }
+
   return releaseTimes;
 }

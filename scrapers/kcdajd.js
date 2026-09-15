@@ -78,6 +78,14 @@ export async function scrapeRoster() {
       : chargeRows.reduce((latest, r) => (!latest || r.release_date_time > latest ? r.release_date_time : latest), null);
 
     const facilityRow = chargeRows.find(r => r.current_facility);
+    // Used by the WA DOC cross-reference (lib/crossReferenceDOC.js) to skip
+    // releases that obviously won't show up in DOC custody -- bond/bail/PR
+    // releases aren't transfers. Take the release reason off whichever
+    // charge actually has one; if reasons differ across charges on the same
+    // booking, prefer a non-bail one (a single bail charge among several
+    // "Transfer of Custody" charges shouldn't mask a real transfer).
+    const reasons = chargeRows.map(r => r.release_reason).filter(Boolean);
+    const releaseReason = reasons.find(r => !/bond|bail|personal recognizance/i.test(r)) || reasons[0] || null;
 
     bookings.push({
       idnum: id,
@@ -87,6 +95,7 @@ export async function scrapeRoster() {
       bookingDate: chargeRows.reduce((min, r) => (r.booking_date_time < min ? r.booking_date_time : min), chargeRows[0].booking_date_time),
       status: stillOpen ? 'in_custody' : 'released',
       releasedAt,
+      releaseReason: stillOpen ? null : releaseReason,
       charges: chargeRows.map(row => ({
         charge: row.charge,
         court: row.court,

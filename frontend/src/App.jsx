@@ -21,9 +21,25 @@ async function fetchAll(filename) {
   return results
 }
 
+// WA DOC cross-reference results (lib/crossReferenceDOC.js) -- only
+// unambiguous, receiving-unit matches are worth surfacing; see that file
+// for the full matching policy.
+async function loadDOCMatches() {
+  try {
+    const res = await fetch('./data/wadoc/matches.json')
+    return res.ok ? await res.json() : {}
+  } catch {
+    return {}
+  }
+}
+
 async function loadCombinedLog() {
-  const perSource = await fetchAll('change_log.json')
-  return perSource.flatMap(log => Array.isArray(log) ? log : [])
+  const [perSource, docMatches] = await Promise.all([fetchAll('change_log.json'), loadDOCMatches()])
+  const log = perSource.flatMap(l => Array.isArray(l) ? l : [])
+  return log.map(entry => {
+    const m = docMatches[entry.source]?.[entry.idnum]
+    return m && m.found && !m.ambiguous ? { ...entry, docMatch: m } : entry
+  })
 }
 
 async function loadCombinedStatus() {

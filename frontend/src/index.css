@@ -178,6 +178,15 @@ body {
   margin-bottom: 0.75rem;
 }
 
+.card-doc-match {
+  font-size: 0.75rem;
+  color: #E0B94D;
+  background: #1D2226;
+  border-left: 3px solid #C9A227;
+  padding: 0.5rem 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
 .charges-title {
   font-size: 0.65rem;
   text-transform: uppercase;

@@ -68,6 +68,12 @@ export default function BookingCard({ entry }) {
             </div>
           )}
 
+          {entry.docMatch && (
+            <div className="card-doc-match">
+              Now in WA DOC custody — {entry.docMatch.facility} (DOC #{entry.docMatch.docNumber})
+            </div>
+          )}
+
           {!isReleased && entry.scheduledReleaseDate && (
             <div className="card-release-row">
               Scheduled release: {entry.scheduledReleaseDate}
