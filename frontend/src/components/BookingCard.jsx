@@ -14,6 +14,24 @@ function calcTimeHeld(start, end) {
   return `${mins}m`
 }
 
+function ChargeRow({ c }) {
+  return (
+    <div className="charge-row">
+      <div className="charge-violation">{c.charge || 'Charge pending'}</div>
+      {c.court && (
+        <div className="charge-court">{c.court}{c.causeNumber && ` — Cause #${c.causeNumber}`}</div>
+      )}
+      {c.rcw && <div className="charge-rcw">RCW/ORD: {c.rcw}</div>}
+      {c.warrant && <div className="charge-warrant">Warrant/Citation: {c.warrant}</div>}
+      {c.arrestAgency && <div className="charge-agency">Arresting agency: {c.arrestAgency}</div>}
+      {c.bail && <div className="charge-bail">Bail: {c.bail}{c.bondType && ` (${c.bondType})`}</div>}
+      {c.disposition && (
+        <div className="charge-disposition">Disposition: {c.disposition}{c.dispositionDate && ` — ${c.dispositionDate}`}</div>
+      )}
+    </div>
+  )
+}
+
 export default function BookingCard({ entry }) {
   const [open, setOpen] = useState(false)
 
@@ -59,19 +77,7 @@ export default function BookingCard({ entry }) {
           {entry.charges && entry.charges.length > 0 ? (
             <div className="card-charges">
               <div className="charges-title">Charges ({entry.charges.length})</div>
-              {entry.charges.map((c, i) => (
-                <div key={i} className="charge-row">
-                  <div className="charge-violation">{c.charge || 'Charge pending'}</div>
-                  {c.court && (
-                    <div className="charge-court">{c.court}{c.causeNumber && ` — Cause #${c.causeNumber}`}</div>
-                  )}
-                  {c.arrestAgency && <div className="charge-agency">Arresting agency: {c.arrestAgency}</div>}
-                  {c.bail && <div className="charge-bail">Bail: {c.bail}{c.bondType && ` (${c.bondType})`}</div>}
-                  {c.disposition && (
-                    <div className="charge-disposition">Disposition: {c.disposition}{c.dispositionDate && ` — ${c.dispositionDate}`}</div>
-                  )}
-                </div>
-              ))}
+              {entry.charges.map((c, i) => <ChargeRow key={i} c={c} />)}
             </div>
           ) : (
             <div className="card-charges">
@@ -79,6 +85,21 @@ export default function BookingCard({ entry }) {
               <div className="charge-row charge-pending">
                 Not yet available — check back shortly.
               </div>
+            </div>
+          )}
+
+          {entry.priorBookings && entry.priorBookings.length > 0 && (
+            <div className="card-history">
+              <div className="charges-title">Booking History ({entry.priorBookings.length} prior)</div>
+              {entry.priorBookings.map((b, i) => (
+                <div key={i} className="prior-booking">
+                  <div className="prior-booking-header">
+                    Booking #{b.bookingNumber} &nbsp;·&nbsp; Booked: {b.bookedDate}
+                    {b.releasedDate && <span> &nbsp;·&nbsp; Released: {b.releasedDate}</span>}
+                  </div>
+                  {b.charges.map((c, j) => <ChargeRow key={j} c={c} />)}
+                </div>
+              ))}
             </div>
           )}
         </div>

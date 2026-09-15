@@ -196,11 +196,25 @@ body {
 .charge-pending { font-size: 0.75rem; color: #8B9298; font-style: italic; }
 .card-time-held { color: #E0B94D; }
 .card-time-held-detail { color: #E0B94D; }
-.charge-bail, .charge-court, .charge-agency, .charge-disposition {
+.charge-bail, .charge-court, .charge-agency, .charge-disposition, .charge-rcw, .charge-warrant {
   font-size: 0.68rem;
   color: #8B9298;
   margin-top: 0.15rem;
 }
+
+.card-history { margin-top: 0.5rem; }
+.prior-booking {
+  background: #181C20;
+  border: 1px solid #2A2E32;
+  padding: 0.6rem 0.75rem;
+  margin-bottom: 0.5rem;
+}
+.prior-booking-header {
+  font-size: 0.7rem;
+  color: #C9A227;
+  margin-bottom: 0.4rem;
+}
+.prior-booking .charge-row { padding: 0.35rem 0; }
 
 /* History Log */
 .history-log {

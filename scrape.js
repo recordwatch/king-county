@@ -26,7 +26,11 @@ const SOURCES = {
     label: 'Kent',
     dataDir: path.join(DATA_DIR, 'kent'),
     fetchRoster: kent.scrapeRoster,
-    // Charges come back inline with the roster — no separate detail fetch.
+    // Inline roster charges are a fallback; the History endpoint gives a
+    // full per-charge breakdown (RCW/court/bail) plus prior-booking history.
+    fetchDetailBatch: kent.scrapeDetailBatch,
+    detailBatchLimit: 30,
+    backfillBatch: 40,
   },
   kirkland: {
     sourceId: 'kirkland',

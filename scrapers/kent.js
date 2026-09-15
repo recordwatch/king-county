@@ -17,6 +17,12 @@ function cleanText(s) {
   return (s || '').replace(/ /g, ' ').replace(/\s+/g, ' ').trim();
 }
 
+// bookingNumber -> personId (Search.InmateSearchResults[N].InmateId), used
+// to call the History endpoint below. Every currently-in-custody person is
+// on the one full roster page each run (unlike Kirkland's small rolling
+// window), so this cache is always complete for anyone still in custody.
+const personIdCache = new Map();
+
 export async function scrapeRoster() {
   const body = new URLSearchParams({
     'Search.BrowseSelection': 'All',
@@ -51,6 +57,9 @@ export async function scrapeRoster() {
 
     if (!bookingNumber) return;
 
+    const personId = personIds[i] || null;
+    if (personId) personIdCache.set(bookingNumber, personId);
+
     const isBail = /^\$/.test(bailOrReleaseType);
     const charges = chargesText
       ? chargesText.split(',').map(c => c.trim()).filter(Boolean).map(charge => ({
@@ -61,7 +70,8 @@ export async function scrapeRoster() {
 
     inmates.push({
       idnum: bookingNumber,
-      personId: personIds[i] || null,
+      personId,
+      detailId: personId,
       bookingNumber,
       name,
       facility: facility || 'Kent Corrections Facility',
@@ -72,4 +82,77 @@ export async function scrapeRoster() {
   });
 
   return inmates;
+}
+
+// Kent's roster table only shows a flat comma-joined charge string. There's
+// an undocumented "History" endpoint -- POST / with History.InmateId=<id>
+// and action:History= present (ASP.NET MVC's multi-submit-button pattern;
+// the button has no value attribute, just needs the key present) -- that
+// returns a per-charge breakdown (Warrant/Citation No, RCW/ORD, Court,
+// Bail) for the current booking, PLUS every prior booking that person has
+// had at Kent, each with its own full charge breakdown. Confirmed live.
+function parseHistory($) {
+  const bookings = [];
+
+  $('#inmateCharges > .panel').each((_, panel) => {
+    const isCurrent = $(panel).hasClass('panel-success');
+    const spans = $(panel).find('.panel-heading a > span');
+    const headerText = cleanText($(spans[0]).text());
+    const statusText = cleanText($(spans[1]).text());
+
+    const headerMatch = headerText.match(/booking:\s*([\w-]+),\s*Booked:\s*(.+?),?$/i);
+    const bookingNumber = headerMatch ? headerMatch[1] : null;
+    const bookedDate = headerMatch ? headerMatch[2].trim() : null;
+    const releasedMatch = statusText.match(/Released:\s*(.+)/i);
+
+    const charges = [];
+    $(panel).find('.panel-body .row .col-md-6').each((__, col) => {
+      const fields = {};
+      $(col).find('p').each((___, p) => {
+        const text = cleanText($(p).text());
+        const m = text.match(/^([^:]+):\s*(.*)$/);
+        if (m) fields[m[1].trim().toLowerCase()] = m[2].trim();
+      });
+      if (!fields['charge']) return;
+      charges.push({
+        charge: fields['charge'],
+        warrant: fields['warrant/citation no'] || null,
+        rcw: fields['rcw/ord'] || null,
+        court: fields['court'] || null,
+        bail: fields['bail'] || null,
+      });
+    });
+
+    bookings.push({
+      bookingNumber,
+      bookedDate,
+      isCurrent,
+      status: isCurrent ? statusText : null,
+      releasedDate: releasedMatch ? releasedMatch[1].trim() : null,
+      charges,
+    });
+  });
+
+  return bookings;
+}
+
+export async function scrapeDetailBatch(bookingNumbers, { roster } = {}) {
+  const results = {};
+  for (const bookingNumber of bookingNumbers) {
+    const personId = personIdCache.get(bookingNumber) || roster?.[bookingNumber]?.detailId;
+    if (!personId) continue;
+    try {
+      const body = new URLSearchParams({ 'History.InmateId': personId, 'action:History': '' });
+      const res = await axios.post(BASE_URL, body, { headers: HEADERS, timeout: 20000 });
+      const $ = cheerio.load(res.data);
+      const bookings = parseHistory($);
+      const current = bookings.find(b => b.isCurrent);
+      const priorBookings = bookings.filter(b => !b.isCurrent && b.bookingNumber !== bookingNumber);
+      const charges = current ? current.charges : [];
+      results[bookingNumber] = { charges, priorBookings, complete: charges.length > 0 };
+    } catch (err) {
+      console.warn(`  History fetch failed for ${bookingNumber}:`, err.message);
+    }
+  }
+  return results;
 }
