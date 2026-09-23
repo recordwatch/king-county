@@ -8,6 +8,11 @@ on:
   schedule:
     - cron: '*/30 * * * *'
   workflow_dispatch:
+    inputs:
+      force_update:
+        description: 'Override the 10% in-custody drop safety check (set to "true")'
+        required: false
+        default: 'false'
 
 permissions:
   contents: write
@@ -31,7 +36,11 @@ jobs:
         run: npm install
 
       - name: Run scrapers
+        id: scrape
+        continue-on-error: true
         run: node scrape.js all
+        env:
+          FORCE_UPDATE: ${{ github.event.inputs.force_update }}
 
       - name: Copy data to frontend public
         run: |
@@ -58,3 +67,7 @@ jobs:
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./frontend/dist
+
+      - name: Fail job if any source failed
+        if: steps.scrape.outcome == 'failure'
+        run: exit 1

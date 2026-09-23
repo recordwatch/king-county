@@ -48,8 +48,9 @@ function parsePanels($, scope) {
 export async function scrapeRoster() {
   const res = await axios.get(ROSTER_URL, { headers: HEADERS, timeout: 30000 });
   if (isUpdatingPlaceholder(res.data)) {
-    console.warn('  SCORE is mid-rebuild ("Updating Information") -- skipping this run.');
-    return [];
+    const err = new Error('SCORE is mid-rebuild ("Updating Information") -- skipping this run.');
+    err.expectedEmpty = true;
+    throw err;
   }
   const $ = cheerio.load(res.data);
 

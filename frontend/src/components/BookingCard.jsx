@@ -36,7 +36,7 @@ export default function BookingCard({ entry }) {
   const [open, setOpen] = useState(false)
 
   const isReleased = entry.status === 'released'
-  const timeHeld = isReleased ? calcTimeHeld(entry.firstSeen, entry.releasedAt) : null
+  const timeHeld = isReleased ? calcTimeHeld(entry.bookingDate || entry.firstSeen, entry.releasedAt) : null
 
   return (
     <div className={`card ${isReleased ? 'card-released' : 'card-custody'}`}>

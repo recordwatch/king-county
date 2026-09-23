@@ -94,7 +94,7 @@ export function computeStats(log) {
   const released = log.filter(e => e.status === 'released')
 
   // --- Summary ---
-  const stays = released.map(e => daysBetween(e.firstSeen, e.releasedAt)).filter(d => d !== null)
+  const stays = released.map(e => daysBetween(e.bookingDate || e.firstSeen, e.releasedAt)).filter(d => d !== null)
   const chargeCounts = log.map(e => (e.charges || []).length)
   const releasesWithBail = released.filter(e =>
     (e.charges || []).some(c => (parseBail(c.bail) || 0) > 0)
@@ -192,7 +192,7 @@ export function computeStats(log) {
   // --- Detention duration by category (released only) ---
   const detentionByCategory = {}
   for (const e of released) {
-    const days = daysBetween(e.firstSeen, e.releasedAt)
+    const days = daysBetween(e.bookingDate || e.firstSeen, e.releasedAt)
     if (days === null) continue
     const cats = new Set((e.charges || []).filter(c => c.charge).map(c => categorizeCharge(c.charge)))
     for (const cat of cats) {
