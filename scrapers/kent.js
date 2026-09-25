@@ -17,6 +17,20 @@ function cleanText(s) {
   return (s || '').replace(/ /g, ' ').replace(/\s+/g, ' ').trim();
 }
 
+// The same column/field on Kent's site is overloaded between a real dollar
+// bail amount (sometimes with a descriptive prefix, e.g. "BAIL BOND OR CASH
+// $2,000.00") and pure release-status text with no dollar figure at all
+// (e.g. "Bail Denied", "Sentenced - Release Date 09/22/2026", "Charge
+// Released - Release Date 08/20/2026") -- confirmed live across both the
+// roster table's column and the History endpoint's per-charge Bail field.
+// Keep the former in `bail`; move the latter to `releaseType` instead of
+// discarding it.
+const DOLLAR_RE = /\$[\d,]+(?:\.\d+)?/;
+function splitBailText(raw) {
+  if (!raw) return { bail: null, releaseType: null };
+  return DOLLAR_RE.test(raw) ? { bail: raw, releaseType: null } : { bail: null, releaseType: raw };
+}
+
 // bookingNumber -> personId (Search.InmateSearchResults[N].InmateId), used
 // to call the History endpoint below. Every currently-in-custody person is
 // on the one full roster page each run (unlike Kirkland's small rolling
@@ -60,11 +74,15 @@ export async function scrapeRoster() {
     const personId = personIds[i] || null;
     if (personId) personIdCache.set(bookingNumber, personId);
 
-    const isBail = /^\$/.test(bailOrReleaseType);
+    // This roster column gives one value for the whole booking, not per
+    // charge -- attach the dollar amount to each inline charge as before,
+    // and the release-type text (if any) at the booking level instead of
+    // silently dropping it.
+    const { bail: rosterBail, releaseType } = splitBailText(bailOrReleaseType);
     const charges = chargesText
       ? chargesText.split(',').map(c => c.trim()).filter(Boolean).map(charge => ({
           charge,
-          bail: isBail ? bailOrReleaseType : null,
+          bail: rosterBail,
         }))
       : [];
 
@@ -77,6 +95,7 @@ export async function scrapeRoster() {
       facility: facility || 'Kent Corrections Facility',
       bookingDate,
       status: 'in_custody',
+      releaseType,
       charges,
     });
   });
@@ -114,12 +133,14 @@ function parseHistory($) {
         if (m) fields[m[1].trim().toLowerCase()] = m[2].trim();
       });
       if (!fields['charge']) return;
+      const { bail, releaseType } = splitBailText(fields['bail'] || null);
       charges.push({
         charge: fields['charge'],
         warrant: fields['warrant/citation no'] || null,
         rcw: fields['rcw/ord'] || null,
         court: fields['court'] || null,
-        bail: fields['bail'] || null,
+        bail,
+        releaseType,
       });
     });
 
@@ -129,8 +150,22 @@ function parseHistory($) {
       isCurrent,
       status: isCurrent ? statusText : null,
       releasedDate: releasedMatch ? releasedMatch[1].trim() : null,
+      totalBail: null,
       charges,
     });
+  });
+
+  // A single "Total Bail for Booking #N is $X" line (confirmed live: exactly
+  // one per page, always for the current booking -- Kent doesn't show a
+  // historical total for prior, closed bookings) sits in the outer "Details
+  // for -- NAME" panel, outside and before the #inmateCharges accordion
+  // entirely, so it has to be found separately and matched back by number.
+  $('p').each((_, p) => {
+    const text = cleanText($(p).text());
+    const m = text.match(/Total Bail for Booking #([\w-]+) is \$?([\d,.]+)/i);
+    if (!m) return;
+    const target = bookings.find(b => b.bookingNumber === m[1]);
+    if (target) target.totalBail = `$${m[2]}`;
   });
 
   return bookings;
@@ -149,7 +184,7 @@ export async function scrapeDetailBatch(bookingNumbers, { roster } = {}) {
       const current = bookings.find(b => b.isCurrent);
       const priorBookings = bookings.filter(b => !b.isCurrent && b.bookingNumber !== bookingNumber);
       const charges = current ? current.charges : [];
-      results[bookingNumber] = { charges, priorBookings, complete: charges.length > 0 };
+      results[bookingNumber] = { charges, priorBookings, totalBail: current?.totalBail || null, complete: charges.length > 0 };
     } catch (err) {
       console.warn(`  History fetch failed for ${bookingNumber}:`, err.message);
     }

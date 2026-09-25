@@ -6,7 +6,7 @@ name: Scrape & Deploy (Live Sources)
 # since its Open Data feed only refreshes every few days.
 on:
   schedule:
-    - cron: '*/30 * * * *'
+    - cron: '*/10 * * * *'
   workflow_dispatch:
     inputs:
       force_update:
@@ -16,6 +16,15 @@ on:
 
 permissions:
   contents: write
+
+# GitHub only honors a fraction of scheduled triggers under load -- running
+# every 10 min (instead of 30) is a partial mitigation for that, but it means
+# two runs can now realistically overlap if one takes a while. Queue instead
+# of canceling: a canceled mid-commit run risks a half-written push, while a
+# queued one just runs late.
+concurrency:
+  group: scrape-live-sources
+  cancel-in-progress: false
 
 jobs:
   scrape-and-deploy:

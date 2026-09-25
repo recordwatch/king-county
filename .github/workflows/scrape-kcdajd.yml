@@ -12,6 +12,14 @@ on:
 permissions:
   contents: write
 
+# Same group as scrape.yml -- both workflows commit/push to the same repo
+# (different data files, but the same git history), so letting them run
+# simultaneously risks a race at the git level regardless of which files
+# each touches. Queue instead of canceling for the same reason as there.
+concurrency:
+  group: scrape-live-sources
+  cancel-in-progress: false
+
 jobs:
   scrape-and-deploy:
     runs-on: ubuntu-latest
