@@ -130,37 +130,46 @@ function parseBookingList($) {
 
 // SCORE's own /recentreleases feed publishes the authoritative release
 // timestamp for each booking -- using it instead of our own scrape-detection
-// time avoids up to 30 min of error from polling cadence alone. Also looks
-// up the release reason (Booking List's "Release Type") for just the ids
-// that were actually released this run, since /recentreleases itself
-// doesn't have that column -- one extra request per release, not per person
-// in custody, so volume stays low.
+// time avoids up to 30 min of error from polling cadence alone. Returns
+// every release row on the page (not deduped by nn) -- the same nn can
+// legitimately appear more than once if that person was released, rebooked,
+// and released again, and collapsing to one entry per nn would silently
+// lose whichever row didn't win. Callers match by (nn, bookingNumber) first
+// and fall back to nn alone. Also looks up the release reason (Booking
+// List's "Release Type") for just the ids that were actually released this
+// run, since /recentreleases itself doesn't have that column -- one extra
+// request per distinct nn, not per row or per person in custody, so volume
+// stays low even for someone with two release rows in the same batch.
 export async function fetchReleaseTimes(releasedIds = []) {
   const res = await axios.get(RECENT_RELEASES_URL, { headers: HEADERS, timeout: 30000 });
-  if (isUpdatingPlaceholder(res.data)) return {};
+  if (isUpdatingPlaceholder(res.data)) return [];
   const $ = cheerio.load(res.data);
 
-  const releaseTimes = {};
+  const rows = [];
   for (const fields of parsePanels($, $('.list'))) {
     const nameNumber = fields['name number'];
     const dateReleased = fields['date released'];
     if (!nameNumber || !dateReleased || dateReleased === 'In SCORE Custody') continue;
-    releaseTimes[nameNumber] = { releasedAt: dateReleased, bookingNumber: fields['booking number'] };
+    rows.push({ nn: nameNumber, bookingNumber: fields['booking number'], releasedAt: dateReleased });
   }
 
-  for (const nn of releasedIds) {
-    const info = releaseTimes[nn];
-    if (!info) continue;
+  const idsSet = new Set(releasedIds);
+  const nnsNeedingReason = [...new Set(rows.filter(r => idsSet.has(r.nn)).map(r => r.nn))];
+  for (const nn of nnsNeedingReason) {
     try {
       const res2 = await axios.post(VIEW_URL, new URLSearchParams({ nn }), { headers: HEADERS, timeout: 20000 });
       if (isUpdatingPlaceholder(res2.data)) continue;
       const $2 = cheerio.load(res2.data);
-      const match = parseBookingList($2).find(b => b.bookingNumber === info.bookingNumber);
-      if (match) info.releaseReason = match.releaseType;
+      const bookingList = parseBookingList($2);
+      for (const row of rows) {
+        if (row.nn !== nn) continue;
+        const match = bookingList.find(b => b.bookingNumber === row.bookingNumber);
+        if (match) row.releaseReason = match.releaseType;
+      }
     } catch (err) {
       console.warn(`  Release-reason fetch failed for nn=${nn}:`, err.message);
     }
   }
 
-  return releaseTimes;
+  return rows;
 }

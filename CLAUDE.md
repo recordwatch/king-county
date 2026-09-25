@@ -1,5 +1,13 @@
 # King County Jail Roster — Project Context
 
+## Working with Claude Code on this repo (standing rules)
+Established during the 2026-09 scraper audit/hardening work, apply to all future sessions in this repo:
+- **Always paste the full real diff, never a summary.** "Here's what changed" prose is not a substitute for `git diff` output.
+- **A "county" label/status requires a value that actually parses.** Any field claiming a release time (or similar) came from the source itself must be backed by a value that genuinely parses as a real date — a non-empty string alone isn't enough. If it doesn't parse, or if it's a value we generated ourselves (e.g. `nowPST()` on a scrape-detection fallback), label it `detected` or `unverified` instead, never `county`.
+- **Test edge cases and list them**: blank/empty values, non-empty-but-unparseable values, small-population sources (a percentage-based threshold that's fine for a 400-person source can misfire on a 15-person one), and reappearance/reversal cases (an id or booking coming back after being marked released/departed). Enumerate the actual test cases run, don't just assert "tested."
+- **Flag anything uncertain instead of deciding silently.** If a change could reasonably go two ways (e.g. "should this same fix apply to that other similar-looking spot too?"), ask rather than picking one and moving on.
+- **Never commit until the user replies "commit"** — make and diff changes, show the diff, then stop and wait. This applies for the rest of this engagement regardless of how the request is phrased, unless the user says otherwise.
+
 ## What it is
 A public jail roster monitor covering King County, WA — but unlike the sibling
 county repos, "King County" isn't one sheriff's feed. It's 4 independently
