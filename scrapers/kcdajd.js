@@ -57,9 +57,7 @@ function formatName(row) {
 
 // Groups per-charge rows into one booking entry each, matching the shared
 // data shape (one entry per booking, charges[] nested inside).
-export async function scrapeRoster() {
-  const rows = await fetchRows();
-
+function groupIntoBookings(rows) {
   const byBooking = new Map();
   for (const row of rows) {
     const id = row.book_of_arrest_number;
@@ -104,6 +102,70 @@ export async function scrapeRoster() {
         releaseReason: row.release_reason,
       })),
     });
+  }
+
+  return bookings;
+}
+
+function escapeSoQL(s) {
+  return s.replace(/'/g, "''");
+}
+
+// Targeted lookup by booking number, bypassing the WINDOW_DAYS date filter
+// entirely -- used for bookings that have aged out of the rolling window in
+// fetchRows() above but are still stored as in_custody, so their real
+// current status gets picked up instead of freezing forever. Batched
+// defensively to keep query strings and page sizes reasonable.
+async function fetchRowsByBookingNumber(bookingNumbers) {
+  if (bookingNumbers.length === 0) return [];
+  const rows = [];
+  const BATCH_SIZE = 50;
+  for (let i = 0; i < bookingNumbers.length; i += BATCH_SIZE) {
+    const batch = bookingNumbers.slice(i, i + BATCH_SIZE);
+    const list = batch.map(bn => `'${escapeSoQL(bn)}'`).join(',');
+    const res = await axios.get(RESOURCE_URL, {
+      params: { $where: `book_of_arrest_number in (${list})`, $limit: PAGE_SIZE },
+      timeout: 30000,
+    });
+    rows.push(...res.data);
+  }
+  return rows;
+}
+
+export async function scrapeRoster(ctx = {}) {
+  const rows = await fetchRows();
+  const bookings = groupIntoBookings(rows);
+
+  // A booking still open past WINDOW_DAYS simply stops being returned by the
+  // windowed query above -- Socrata doesn't republish a row just because
+  // it's still active -- which otherwise freezes it forever at its
+  // last-known status regardless of what actually happened. Check those
+  // specifically, by booking number, so they get resolved one way or the
+  // other instead. `ctx.roster` is the currently-stored roster, passed in by
+  // runScraper.js the same way fetchDetailBatch already receives it.
+  const roster = ctx.roster || {};
+  const cutoff = new Date(Date.now() - WINDOW_DAYS * 24 * 60 * 60 * 1000);
+  const inWindow = new Set(bookings.map(b => b.bookingNumber));
+  const frozenBookingNumbers = Object.values(roster)
+    .filter(e => e.status === 'in_custody' && e.bookingDate && new Date(e.bookingDate) < cutoff && !inWindow.has(e.bookingNumber))
+    .map(e => e.bookingNumber);
+
+  if (frozenBookingNumbers.length > 0) {
+    const frozenRows = await fetchRowsByBookingNumber(frozenBookingNumbers);
+    const frozenBookings = groupIntoBookings(frozenRows);
+    const found = new Set(frozenBookings.map(b => b.bookingNumber));
+    bookings.push(...frozenBookings);
+
+    // A booking number Socrata simply doesn't return anything for isn't
+    // proof of anything -- could be a transient API hiccup, could be a real
+    // data gap -- so it's left completely out of the result rather than
+    // guessed at either way. Since explicitStatus sources only touch ids
+    // that actually appear in this run's records, leaving it out means the
+    // stored entry stays exactly as it was: flagged here, not released.
+    const notFound = frozenBookingNumbers.filter(bn => !found.has(bn));
+    if (notFound.length > 0) {
+      console.warn(`  ${notFound.length} booking(s) outside the ${WINDOW_DAYS}-day window not found in Socrata by number -- leaving unchanged, not releasing: ${notFound.join(', ')}`);
+    }
   }
 
   return bookings;
