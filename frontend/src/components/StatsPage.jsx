@@ -24,7 +24,7 @@ async function loadStatusBySource() {
   return bySource
 }
 
-const TABS = ['Summary', 'Trends', 'Crime Types', 'Bail & Release', 'Agencies', 'Detention']
+const TABS = ['Summary', 'Trends', 'Crime Types', 'Bail & Release', 'Agencies', 'Detention', 'Repeat Bookings']
 
 function fmtMoney(n) {
   if (n === null || n === undefined) return '—'
@@ -263,6 +263,59 @@ function DetentionTab({ stats }) {
   )
 }
 
+function RepeatBookingsTab({ stats }) {
+  const { repeatRates } = stats
+  const available = ['score', 'kent']
+  const unavailable = ['kirkland', 'kc_dajd']
+  return (
+    <div>
+      <div className="section-note">
+        Definition: had another booking at this same jail in the 12 months before this booking.
+        These are within-jail rates — bookings at other jails in this dataset are not counted.
+        Kirkland and King County DAJD don't publish booking history data.
+      </div>
+      {available.map(id => {
+        const r = repeatRates[id]
+        if (!r) return null
+        return (
+          <div className="agency-block" key={id}>
+            <div className="agency-name">{sourceLabel(id)}</div>
+            <div className="stats-grid">
+              <div className="stat-card">
+                <div className="stat-card-num">{r.rate !== null ? (r.rate * 100).toFixed(1) + '%' : '—'}</div>
+                <div className="stat-card-label">Repeat Rate</div>
+              </div>
+              <div className="stat-card">
+                <div className="stat-card-num">{r.included.toLocaleString()}</div>
+                <div className="stat-card-label">Bookings in Sample</div>
+              </div>
+              <div className="stat-card">
+                <div className="stat-card-num">{r.repeats.toLocaleString()}</div>
+                <div className="stat-card-label">Had Prior Booking</div>
+                <div className="stat-card-sub">in preceding 12 mo</div>
+              </div>
+            </div>
+            {r.nullExcluded > 0 && (
+              <div className="section-note">{r.nullExcluded} {r.nullExcluded === 1 ? 'entry' : 'entries'} excluded — history not yet fetched.</div>
+            )}
+            {r.dateRange && (
+              <div className="section-note">
+                Current-booking date range: {fmtDate(r.dateRange.min)} – {fmtDate(r.dateRange.max)}
+              </div>
+            )}
+          </div>
+        )
+      })}
+      {unavailable.map(id => (
+        <div className="agency-block" key={id}>
+          <div className="agency-name">{sourceLabel(id)}</div>
+          <div className="agency-meta">Not available — this source doesn&apos;t publish booking history.</div>
+        </div>
+      ))}
+    </div>
+  )
+}
+
 export default function StatsPage() {
   const [log, setLog] = useState(null)
   const [status, setStatus] = useState(null)
@@ -299,6 +352,7 @@ export default function StatsPage() {
             {tab === 'Bail & Release' && <BailTab stats={stats} />}
             {tab === 'Agencies' && <AgenciesTab stats={stats} />}
             {tab === 'Detention' && <DetentionTab stats={stats} />}
+            {tab === 'Repeat Bookings' && <RepeatBookingsTab stats={stats} />}
           </div>
         </>
       )}

@@ -7,6 +7,7 @@ Established during the 2026-09 scraper audit/hardening work, apply to all future
 - **Test edge cases and list them**: blank/empty values, non-empty-but-unparseable values, small-population sources (a percentage-based threshold that's fine for a 400-person source can misfire on a 15-person one), and reappearance/reversal cases (an id or booking coming back after being marked released/departed). Enumerate the actual test cases run, don't just assert "tested."
 - **Flag anything uncertain instead of deciding silently.** If a change could reasonably go two ways (e.g. "should this same fix apply to that other similar-looking spot too?"), ask rather than picking one and moving on.
 - **Never commit until the user replies "commit"** — make and diff changes, show the diff, then stop and wait. This applies for the rest of this engagement regardless of how the request is phrased, unless the user says otherwise.
+- **After pushing any data backfill, wait for the next scrape run and confirm the backfill counts survived.** Don't declare a backfill complete until the post-run data is verified.
 
 ## What it is
 A public jail roster monitor covering King County, WA — but unlike the sibling
