@@ -12,6 +12,7 @@
 // - No individual's name appears anywhere in stats output.
 
 import { SOURCES } from './sources'
+import { parseEntryDate, entryDateParts } from './dates'
 
 function stripSuffix(charge) {
   return charge
@@ -84,9 +85,9 @@ export function mean(nums) {
   return nums.reduce((a, b) => a + b, 0) / nums.length
 }
 
-export function daysBetween(startStr, endStr) {
-  const start = new Date(startStr)
-  const end = new Date(endStr)
+export function daysBetween(source, startStr, endStr) {
+  const start = parseEntryDate(source, startStr)
+  const end = parseEntryDate(source, endStr)
   if (isNaN(start.getTime()) || isNaN(end.getTime())) return null
   const days = (end - start) / (1000 * 60 * 60 * 24)
   return days >= 0 ? days : null
@@ -119,7 +120,7 @@ function countyReleased(entries) {
 
 function stayStatsFor(entries) {
   const stays = countyReleased(entries)
-    .map(e => daysBetween(e.bookingDate || e.firstSeen, e.releasedAt))
+    .map(e => daysBetween(e.source, e.bookingDate || e.firstSeen, e.releasedAt))
     .filter(d => d !== null)
   return { n: stays.length, avgDays: mean(stays), medianDays: median(stays) }
 }
@@ -185,7 +186,7 @@ export function computeStats(log) {
   const released = log.filter(e => e.status === 'released')
 
   const allDates = log
-    .map(e => new Date(e.bookingDate || e.firstSeen))
+    .map(e => parseEntryDate(e.source, e.bookingDate || e.firstSeen))
     .filter(d => !isNaN(d.getTime()))
   const dateRange = allDates.length
     ? { min: new Date(Math.min(...allDates)), max: new Date(Math.max(...allDates)) }
@@ -214,8 +215,10 @@ export function computeStats(log) {
   const WEEKDAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
   const weekdayCounts = new Array(7).fill(0)
   for (const e of log) {
-    const d = new Date(e.bookingDate || e.firstSeen)
-    if (!isNaN(d.getTime())) weekdayCounts[d.getDay()] += 1
+    // Weekday from the calendar date entryDateParts gives (Pacific for KC
+    // DAJD's UTC values, unchanged local reading for every other source).
+    const p = entryDateParts(e.source, e.bookingDate || e.firstSeen)
+    if (p) weekdayCounts[new Date(Date.UTC(p.year, p.month - 1, p.day)).getUTCDay()] += 1
   }
   const trends = { byWeekday: WEEKDAY_NAMES.map((name, i) => ({ name, count: weekdayCounts[i] })) }
 
@@ -267,7 +270,7 @@ export function computeStats(log) {
   for (const id of sourceIds) {
     const byCategory = {}
     for (const e of countyReleased(bySource[id])) {
-      const days = daysBetween(e.bookingDate || e.firstSeen, e.releasedAt)
+      const days = daysBetween(e.source, e.bookingDate || e.firstSeen, e.releasedAt)
       if (days === null) continue
       const cats = new Set((e.charges || []).filter(c => c.charge).map(c => categorizeCharge(c.charge)))
       for (const cat of cats) {

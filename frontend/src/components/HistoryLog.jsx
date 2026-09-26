@@ -1,29 +1,33 @@
 import { Link } from 'react-router-dom'
+import { sourceLagNote } from '../sources'
+import { parseEntryDate, entryDateParts } from '../dates'
 
-function formatDate(dateStr) {
+function formatDate(source, dateStr) {
   if (!dateStr) return ''
-  const d = new Date(dateStr)
-  const month = String(d.getMonth() + 1).padStart(2, '0')
-  const day = String(d.getDate()).padStart(2, '0')
-  const year = String(d.getFullYear()).slice(-2)
+  const p = entryDateParts(source, dateStr)
+  if (!p) return 'Unknown date'
+  const month = String(p.month).padStart(2, '0')
+  const day = String(p.day).padStart(2, '0')
+  const year = String(p.year).slice(-2)
   return `${month}/${day}/${year}`
 }
 
-function formatTime(dateStr) {
+function formatTime(source, dateStr) {
   if (!dateStr) return ''
-  const d = new Date(dateStr)
-  let hours = d.getHours()
-  const minutes = String(d.getMinutes()).padStart(2, '0')
+  const p = entryDateParts(source, dateStr)
+  if (!p) return 'unknown time'
+  let hours = p.hour
+  const minutes = String(p.minute).padStart(2, '0')
   const ampm = hours >= 12 ? 'PM' : 'AM'
   hours = hours % 12
   hours = hours ? hours : 12
   return `${hours}:${minutes} ${ampm}`
 }
 
-function calculateTimeServed(booked, released) {
+function calculateTimeServed(source, booked, released) {
   if (!booked || !released) return null
-  const start = new Date(booked)
-  const end = new Date(released)
+  const start = parseEntryDate(source, booked)
+  const end = parseEntryDate(source, released)
   const diffMs = end - start
   if (diffMs <= 0) return null
   const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24))
@@ -45,11 +49,11 @@ export default function HistoryLog({ entries, search = '' }) {
   const grouped = {}
 
   filtered.forEach(entry => {
-    const bookedDate = formatDate(entry.bookingDate || entry.firstSeen)
+    const bookedDate = formatDate(entry.source, entry.bookingDate || entry.firstSeen)
     if (!grouped[bookedDate]) grouped[bookedDate] = { booked: [], released: [] }
 
     if (entry.releasedAt) {
-      const releasedDate = formatDate(entry.releasedAt)
+      const releasedDate = formatDate(entry.source, entry.releasedAt)
       if (!grouped[releasedDate]) grouped[releasedDate] = { booked: [], released: [] }
       grouped[releasedDate].released.push(entry)
     } else {
@@ -90,8 +94,9 @@ export default function HistoryLog({ entries, search = '' }) {
                     <li key={entry.idnum} className="history-item">
                       <span className="history-name">{entry.name}</span>
                       <span className="history-meta">
-                        Booked: {formatTime(entry.bookingDate || entry.firstSeen)}
+                        Booked: {formatTime(entry.source, entry.bookingDate || entry.firstSeen)}
                         {entry.facility && <span> | {entry.facility}</span>}
+                        {sourceLagNote(entry.source) && <span className="history-lag-note"> | {sourceLagNote(entry.source)}</span>}
                         {entry.charges && entry.charges.length > 0 && (
                           <span className="history-charges"> | Charges: {entry.charges.map(c => c.charge).filter(Boolean).join(', ')}</span>
                         )}
@@ -107,13 +112,14 @@ export default function HistoryLog({ entries, search = '' }) {
                 <div className="history-section-title">RELEASED ({releasedCount})</div>
                 <ul className="history-list">
                   {dayData.released.map(entry => {
-                    const timeServed = calculateTimeServed(entry.bookingDate || entry.firstSeen, entry.releasedAt)
+                    const timeServed = calculateTimeServed(entry.source, entry.bookingDate || entry.firstSeen, entry.releasedAt)
                     return (
                       <li key={entry.idnum} className="history-item">
                         <span className="history-name">{entry.name}</span>
                         <span className="history-meta">
-                          Released: {formatTime(entry.releasedAt)}
+                          Released: {formatTime(entry.source, entry.releasedAt)}
                           {entry.facility && <span> | {entry.facility}</span>}
+                          {sourceLagNote(entry.source) && <span className="history-lag-note"> | {sourceLagNote(entry.source)}</span>}
                           {timeServed && (
                             <span className="history-time-served"> | Time served: {timeServed}</span>
                           )}

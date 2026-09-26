@@ -1,4 +1,4 @@
-import { SOURCES } from '../sources'
+import { SOURCES, combinedLagNote } from '../sources'
 
 export default function StatBar({ status }) {
   return (
@@ -7,6 +7,7 @@ export default function StatBar({ status }) {
         <div className="stat">
           <div className="stat-num">{status.inCustody}</div>
           <div className="stat-label">Currently in custody (all sources)</div>
+          {combinedLagNote() && <div className="stat-label stat-lag-note">{combinedLagNote()}</div>}
         </div>
       </div>
       <div className="statbar-sources">
@@ -17,6 +18,7 @@ export default function StatBar({ status }) {
               <span className="source-stat-label">{s.label}</span>
               <span className="source-stat-num">{src ? src.inCustody : '—'}</span>
               <span className="source-stat-cadence">{src ? src.lastUpdated : 'no data yet'}</span>
+              {s.lagNote && <span className="source-stat-cadence source-stat-lag">{s.lagNote}</span>}
             </div>
           )
         })}

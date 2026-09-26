@@ -1,9 +1,10 @@
 import { useState } from 'react'
-import { sourceLabel } from '../sources'
+import { sourceLabel, sourceLagNote } from '../sources'
+import { parseEntryDate, displayEntryDate } from '../dates'
 
-function calcTimeHeld(start, end) {
+function calcTimeHeld(source, start, end) {
   if (!start || !end) return null
-  const ms = new Date(end) - new Date(start)
+  const ms = parseEntryDate(source, end) - parseEntryDate(source, start)
   if (ms <= 0) return null
   const totalMins = Math.floor(ms / 60000)
   const days  = Math.floor(totalMins / 1440)
@@ -36,12 +37,13 @@ export default function BookingCard({ entry }) {
   const [open, setOpen] = useState(false)
 
   const isReleased = entry.status === 'released'
-  const rawTimeHeld = isReleased ? calcTimeHeld(entry.bookingDate || entry.firstSeen, entry.releasedAt) : null
+  const rawTimeHeld = isReleased ? calcTimeHeld(entry.source, entry.bookingDate || entry.firstSeen, entry.releasedAt) : null
   // Only a "county" releaseSource is a real, source-published release time --
   // 'detected' (our own disappearance-based guess) and 'unverified'
   // (Kirkland's own real-date column, not independently confirmed) are
   // approximate, so the duration built from them is labeled as such.
   const timeHeld = rawTimeHeld && entry.releaseSource !== 'county' ? `about ${rawTimeHeld}` : rawTimeHeld
+  const lagNote = sourceLagNote(entry.source)
 
   return (
     <div className={`card ${isReleased ? 'card-released' : 'card-custody'}`}>
@@ -52,10 +54,11 @@ export default function BookingCard({ entry }) {
             <span className="source-badge">{sourceLabel(entry.source)}</span>
           </div>
           <div className="card-meta">
-            Booking #{entry.bookingNumber} &nbsp;·&nbsp; Booked: {entry.bookingDate || entry.firstSeen}
+            Booking #{entry.bookingNumber} &nbsp;·&nbsp; Booked: {displayEntryDate(entry.source, entry.bookingDate || entry.firstSeen)}
             {entry.facility && <span> &nbsp;·&nbsp; {entry.facility}</span>}
             {timeHeld && <span className="card-time-held"> &nbsp;·&nbsp; Held: {timeHeld}</span>}
           </div>
+          {lagNote && <div className="card-lag-note">{lagNote}</div>}
         </div>
         <div className="card-right">
           <span className={`badge ${isReleased ? 'badge-released' : 'badge-custody'}`}>
@@ -69,7 +72,7 @@ export default function BookingCard({ entry }) {
         <div className="card-body">
           {isReleased && entry.releasedAt && (
             <div className="card-release-row">
-              Released: {entry.releasedAt}{timeHeld && <span className="card-time-held-detail"> &nbsp;·&nbsp; Time held: {timeHeld}</span>}
+              Released: {displayEntryDate(entry.source, entry.releasedAt)}{timeHeld && <span className="card-time-held-detail"> &nbsp;·&nbsp; Time held: {timeHeld}</span>}
             </div>
           )}
 
