@@ -284,5 +284,52 @@ export function computeStats(log) {
     }
   }
 
-  return { totals, trends, crimeTypes, stayLength, bail, agencies, detention }
+  // --- Repeat bookings (SCORE + Kent only — both have per-person booking
+  // history from the source itself; Kirkland and KC DAJD do not)
+  // Definition: had another booking at this same jail in the 12 months
+  // before this booking.
+  //
+  // SCORE's bookingHistory includes the current booking; it's excluded by
+  // matching bookingNumber so it doesn't count as a prior booking against
+  // itself. Kent's priorBookings already contains only prior bookings.
+  // Null histories are excluded from both rates.
+  function repeatRateFor(entries, historyKey, priorDateKey, selfBookingKey) {
+    let included = 0, repeats = 0, nullExcluded = 0
+    const dates = []
+    for (const e of entries) {
+      const hist = e[historyKey]
+      if (hist === null || hist === undefined) { nullExcluded++; continue }
+      included++
+      const curDate = new Date(e.bookingDate)
+      if (isNaN(curDate)) continue
+      dates.push(curDate)
+      const twelveBack = new Date(curDate)
+      twelveBack.setFullYear(twelveBack.getFullYear() - 1)
+      const others = selfBookingKey
+        ? hist.filter(h => h[selfBookingKey] !== e.bookingNumber)
+        : hist
+      if (others.some(h => {
+        const d = new Date(h[priorDateKey])
+        return !isNaN(d) && d >= twelveBack && d < curDate
+      })) repeats++
+    }
+    return {
+      included,
+      nullExcluded,
+      repeats,
+      rate: included > 0 ? repeats / included : null,
+      dateRange: dates.length
+        ? { min: new Date(Math.min(...dates)), max: new Date(Math.max(...dates)) }
+        : null,
+    }
+  }
+
+  const repeatRates = {
+    score: repeatRateFor(bySource.score || [], 'bookingHistory', 'dateBooked', 'bookingNumber'),
+    kent: repeatRateFor(bySource.kent || [], 'priorBookings', 'bookedDate', 'bookingNumber'),
+    kirkland: null,
+    kc_dajd: null,
+  }
+
+  return { totals, trends, crimeTypes, stayLength, bail, agencies, detention, repeatRates }
 }
