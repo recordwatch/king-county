@@ -97,21 +97,55 @@ function parseOffenses($) {
   return charges;
 }
 
+// Once someone's released, their view page's "Current Booking" section
+// permanently reads "No current custody booking record" instead of having
+// an Offenses table at all -- confirmed live 2026-09-26. There's no future
+// run where that person will suddenly have charges again, so charges.length
+// > 0 can never become true for them; treating that state as complete too
+// (rather than perpetually incomplete) stops the backfill pass from wasting
+// its fixed per-run slot count re-fetching the same already-hopeless
+// records forever, which was starving genuinely-pending in_custody people
+// out of ever getting backfilled (confirmed: 131 of 163 SCORE hasDetail:false
+// records were exactly this case).
+function hasNoCurrentBooking(html) {
+  return /No current custody booking record/i.test(html);
+}
+
 export async function scrapeDetailBatch(nameNumbers) {
   const results = {};
   for (const nn of nameNumbers) {
+    let res;
     try {
-      const res = await axios.post(VIEW_URL, new URLSearchParams({ nn }), { headers: HEADERS, timeout: 20000 });
-      if (isUpdatingPlaceholder(res.data)) continue;
-      const $ = cheerio.load(res.data);
-      const charges = parseOffenses($);
-      // Booking List comes from the same page load as Offenses -- no extra
-      // request needed to also store this person's full booking history.
-      const bookingHistory = parseBookingList($);
-      results[nn] = { charges, bookingHistory, complete: charges.length > 0 };
+      res = await axios.post(VIEW_URL, new URLSearchParams({ nn }), { headers: HEADERS, timeout: 20000 });
     } catch (err) {
       console.warn(`  Detail fetch failed for nn=${nn}:`, err.message);
+      continue;
     }
+    // If SCORE is mid-rebuild, every remaining request in this batch will
+    // hit the same placeholder -- stop instead of burning through the rest
+    // of the batch one at a time for nothing (confirmed live: a batch this
+    // size can span long enough to run into one of SCORE's multi-minute
+    // rebuild windows partway through).
+    if (isUpdatingPlaceholder(res.data)) {
+      console.warn(`  SCORE is mid-rebuild -- stopping detail batch early (${Object.keys(results).length}/${nameNumbers.length} fetched).`);
+      break;
+    }
+    const $ = cheerio.load(res.data);
+    const charges = parseOffenses($);
+    const noCurrentBooking = hasNoCurrentBooking(res.data);
+    // Booking List comes from the same page load as Offenses -- no extra
+    // request needed to also store this person's full booking history.
+    const parsedHistory = parseBookingList($);
+    // A person with no current booking (i.e. released) should always have
+    // at least their own most-recent booking in this list -- true for every
+    // other released record checked live. An empty list here alongside "no
+    // current booking" means SCORE's own page failed to render that section
+    // (confirmed live: shows "Unable to display" in place of it for real
+    // records), not that the person genuinely has no history -- treat it as
+    // unresolved (null) so it gets retried, rather than storing it as final.
+    const bookingHistory = noCurrentBooking && parsedHistory.length === 0 ? null : parsedHistory;
+    const complete = charges.length > 0 || noCurrentBooking;
+    results[nn] = { charges, bookingHistory, complete };
   }
   return results;
 }
@@ -224,23 +258,36 @@ export async function recheckDetectedReleases(pending) {
 
   const results = new Map();
   for (const [nn, entries] of byNn) {
+    let res;
     try {
-      const res = await axios.post(VIEW_URL, new URLSearchParams({ nn }), { headers: HEADERS, timeout: 20000 });
-      if (!isUpdatingPlaceholder(res.data)) {
-        const $ = cheerio.load(res.data);
-        const bookingHistory = parseBookingList($);
-        for (const entry of entries) {
-          const match = bookingHistory.find(b => b.bookingNumber === entry.bookingNumber);
-          const upgrade = { bookingHistory };
-          if (match && isValidScoreDate(match.dateReleased)) {
-            upgrade.releasedAt = match.dateReleased;
-            upgrade.releaseReason = match.releaseType;
-          }
-          results.set(entry.idnum, upgrade);
-        }
-      }
+      res = await axios.post(VIEW_URL, new URLSearchParams({ nn }), { headers: HEADERS, timeout: 20000 });
     } catch (err) {
       console.warn(`  Detected-release recheck failed for nn=${nn}:`, err.message);
+      await sleep(RECHECK_DELAY_MS);
+      continue;
+    }
+    // Same reasoning as scrapeDetailBatch: stop the whole recheck pass
+    // rather than continuing to hit every remaining pending nn one at a time
+    // during a rebuild window.
+    if (isUpdatingPlaceholder(res.data)) {
+      console.warn(`  SCORE is mid-rebuild -- stopping detected-release recheck early.`);
+      break;
+    }
+    const $ = cheerio.load(res.data);
+    const parsedHistory = parseBookingList($);
+    // Every entry here is already known to be released -- an empty list is
+    // never legitimate (see scrapeDetailBatch), so don't store it; leave
+    // bookingHistory unresolved so this nn gets tried again next run instead
+    // of freezing an incorrect "confirmed empty" result in permanently.
+    const bookingHistory = parsedHistory.length === 0 ? null : parsedHistory;
+    for (const entry of entries) {
+      const match = bookingHistory ? bookingHistory.find(b => b.bookingNumber === entry.bookingNumber) : null;
+      const upgrade = { bookingHistory };
+      if (match && isValidScoreDate(match.dateReleased)) {
+        upgrade.releasedAt = match.dateReleased;
+        upgrade.releaseReason = match.releaseType;
+      }
+      results.set(entry.idnum, upgrade);
     }
     await sleep(RECHECK_DELAY_MS);
   }
