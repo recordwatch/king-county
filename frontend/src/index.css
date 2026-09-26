@@ -47,6 +47,8 @@ body {
 .source-stat-label { font-size: 0.6rem; text-transform: uppercase; letter-spacing: 0.07em; color: #3A2F0C; }
 .source-stat-num { font-family: 'Playfair Display', serif; font-size: 1rem; color: #1A1607; }
 .source-stat-cadence { font-size: 0.55rem; color: #4A3D10; max-width: 180px; line-height: 1.3; }
+.source-stat-lag { font-style: italic; }
+.stat-lag-note { font-style: italic; text-transform: none; }
 
 .controls {
   display: flex;
@@ -156,6 +158,7 @@ body {
   border-radius: 2px;
 }
 .card-meta { font-size: 0.65rem; color: #8B9298; text-transform: uppercase; letter-spacing: 0.07em; }
+.card-lag-note { font-size: 0.6rem; color: #C9A227; font-style: italic; margin-top: 0.15rem; }
 .card-right { display: flex; align-items: center; gap: 0.75rem; flex-shrink: 0; }
 .card-toggle { color: #8B9298; font-size: 0.7rem; }
 
@@ -417,6 +420,9 @@ body {
 .history-time-served {
   color: #E0B94D;
   font-weight: 500;
+}
+.history-lag-note {
+  font-style: italic;
 }
 .history-charges {
   display: block;

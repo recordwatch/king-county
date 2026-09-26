@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import Header from './Header'
 import HBarList from './HBarList'
 import { computeStats } from '../statsUtils'
-import { SOURCES, sourceLabel } from '../sources'
+import { SOURCES, sourceLabel, combinedLagNote } from '../sources'
 
 async function fetchAll(filename) {
   const results = await Promise.all(
@@ -98,6 +98,7 @@ function SummaryTab({ stats, status }) {
         <div className="stat-card">
           <div className="stat-card-num">{t.inCustody}</div>
           <div className="stat-card-label">In Custody</div>
+          {combinedLagNote() && <div className="stat-card-sub">{combinedLagNote()}</div>}
         </div>
         <div className="stat-card">
           <div className="stat-card-num">{t.released}</div>

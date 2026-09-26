@@ -6,6 +6,7 @@ import BookingCard from './components/BookingCard'
 import HistoryLog from './components/HistoryLog'
 import StatsPage from './components/StatsPage'
 import { SOURCES } from './sources'
+import { parseEntryDate, entryDateParts } from './dates'
 
 // Each source is scraped independently into its own data/<id>/ directory —
 // merge them here rather than in scrape.js so a slow/failed source never
@@ -58,11 +59,11 @@ async function loadCombinedStatus() {
 
 function getDateLabel(entry, field = 'firstSeen') {
   const raw = entry[field] || entry.bookingDate || ''
-  const d = new Date(raw)
-  if (isNaN(d.getTime())) return raw.split(',')[0].trim()
-  const month = String(d.getMonth() + 1).padStart(2, '0')
-  const day = String(d.getDate()).padStart(2, '0')
-  return `${month}/${day}/${d.getFullYear()}`
+  const p = entryDateParts(entry.source, raw)
+  if (!p) return raw.split(',')[0].trim()
+  const month = String(p.month).padStart(2, '0')
+  const day = String(p.day).padStart(2, '0')
+  return `${month}/${day}/${p.year}`
 }
 
 function BookingLog({ entries, grouped = false, groupBy = 'firstSeen' }) {
@@ -136,7 +137,7 @@ function InCustodyPage() {
     Promise.all([loadCombinedLog(), loadCombinedStatus()]).then(([logData, statusData]) => {
       const inCustody = logData
         .filter(e => e.status === 'in_custody')
-        .sort((a, b) => new Date(b.bookingDate) - new Date(a.bookingDate))
+        .sort((a, b) => parseEntryDate(b.source, b.bookingDate) - parseEntryDate(a.source, a.bookingDate))
       setLog(inCustody)
       setStatus(statusData)
       setLoading(false)
@@ -179,7 +180,7 @@ function ReleasedPage() {
     loadCombinedLog().then(logData => {
       const released = logData
         .filter(e => e.status === 'released')
-        .sort((a, b) => new Date(b.releasedAt) - new Date(a.releasedAt))
+        .sort((a, b) => parseEntryDate(b.source, b.releasedAt) - parseEntryDate(a.source, a.releasedAt))
       setLog(released)
       setLoading(false)
     })
