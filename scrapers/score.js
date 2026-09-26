@@ -111,6 +111,22 @@ function hasNoCurrentBooking(html) {
   return /No current custody booking record/i.test(html);
 }
 
+// SCORE renders this literal text in place of a section with zero rows to
+// show, rather than an empty-but-well-formed section -- confirmed live: it's
+// SCORE's actual "nothing here" state for the Booking List, not a rare
+// glitch (all 58 of SCORE's then-empty bookingHistory records showed it,
+// alongside an otherwise-intact page). Whether an empty Booking List is
+// trustworthy depends on custody status, not on this text alone: an
+// in_custody person can genuinely have zero prior bookings (a first-time
+// booking -- confirmed via nn recency, see scrapeDetailBatch), but a
+// released person can never legitimately have zero bookings at all (their
+// own most-recent one would always be listed) -- confirmed on EMERY/RIVERO,
+// whose page also failed to render the Person-details block, a released
+// person with zero bookings being structurally impossible.
+function hasUnableToDisplay(html) {
+  return /Unable to display/i.test(html);
+}
+
 export async function scrapeDetailBatch(nameNumbers) {
   const results = {};
   for (const nn of nameNumbers) {
@@ -136,15 +152,17 @@ export async function scrapeDetailBatch(nameNumbers) {
     // Booking List comes from the same page load as Offenses -- no extra
     // request needed to also store this person's full booking history.
     const parsedHistory = parseBookingList($);
-    // A person with no current booking (i.e. released) should always have
-    // at least their own most-recent booking in this list -- true for every
-    // other released record checked live. An empty list here alongside "no
-    // current booking" means SCORE's own page failed to render that section
-    // (confirmed live: shows "Unable to display" in place of it for real
-    // records), not that the person genuinely has no history -- treat it as
-    // unresolved (null) so it gets retried, rather than storing it as final.
-    const bookingHistory = noCurrentBooking && parsedHistory.length === 0 ? null : parsedHistory;
+    // "No current custody booking record" is its own independent, reliable
+    // signal (matches ground truth for every released record checked, even
+    // alongside an "Unable to display" Booking List) -- charges completeness
+    // is decided by it alone, regardless of Booking List rendering.
     const complete = charges.length > 0 || noCurrentBooking;
+    // A confirmed-empty ("Unable to display") Booking List means something
+    // different depending on custody status: in_custody + empty = a genuine
+    // first booking, final (store []); released + empty is impossible, so
+    // leave it unresolved (null) to be retried rather than stored as final.
+    const confirmedEmpty = hasUnableToDisplay(res.data) && parsedHistory.length === 0;
+    const bookingHistory = confirmedEmpty ? (noCurrentBooking ? null : []) : parsedHistory;
     results[nn] = { charges, bookingHistory, complete };
   }
   return results;
@@ -275,11 +293,12 @@ export async function recheckDetectedReleases(pending) {
     }
     const $ = cheerio.load(res.data);
     const parsedHistory = parseBookingList($);
-    // Every entry here is already known to be released -- an empty list is
-    // never legitimate (see scrapeDetailBatch), so don't store it; leave
-    // bookingHistory unresolved so this nn gets tried again next run instead
-    // of freezing an incorrect "confirmed empty" result in permanently.
-    const bookingHistory = parsedHistory.length === 0 ? null : parsedHistory;
+    // Every entry here is already known to be released, so -- unlike
+    // scrapeDetailBatch, which also handles genuinely-first-time in_custody
+    // bookings -- an empty list can never be legitimate regardless of
+    // whether "Unable to display" is present; reject on either signal.
+    const unreliable = hasUnableToDisplay(res.data) || parsedHistory.length === 0;
+    const bookingHistory = unreliable ? null : parsedHistory;
     for (const entry of entries) {
       const match = bookingHistory ? bookingHistory.find(b => b.bookingNumber === entry.bookingNumber) : null;
       const upgrade = { bookingHistory };
