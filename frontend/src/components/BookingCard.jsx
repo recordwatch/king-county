@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { sourceLabel, sourceLagNote } from '../sources'
+import { sourceLabel, entryLagNote } from '../sources'
 import { parseEntryDate, displayEntryDate } from '../dates'
 
 function calcTimeHeld(source, start, end) {
@@ -43,7 +43,7 @@ export default function BookingCard({ entry }) {
   // (Kirkland's own real-date column, not independently confirmed) are
   // approximate, so the duration built from them is labeled as such.
   const timeHeld = rawTimeHeld && entry.releaseSource !== 'county' ? `about ${rawTimeHeld}` : rawTimeHeld
-  const lagNote = sourceLagNote(entry.source)
+  const lagNote = entryLagNote(entry)
 
   return (
     <div className={`card ${isReleased ? 'card-released' : 'card-custody'}`}>

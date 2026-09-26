@@ -4,6 +4,7 @@ import { fileURLToPath } from 'url';
 import { dirname } from 'path';
 import { runScrape } from './lib/runScraper.js';
 import { runCrossReference } from './lib/crossReferenceDOC.js';
+import { runPortal } from './lib/runPortal.js';
 import { nowPST } from './utils.js';
 import * as kcdajd from './scrapers/kcdajd.js';
 import * as score from './scrapers/score.js';
@@ -92,10 +93,26 @@ async function main() {
     return;
   }
 
+  // KC DAJD's live lookup portal (Playwright) -- keeps data/kc_dajd's custody
+  // status current between Socrata's 1-2-week republishes. See
+  // lib/runPortal.js. PORTAL_DRY_RUN=true writes to PORTAL_OUT_DIR instead of
+  // data/; PORTAL_PRIORITY (comma-separated booking numbers) only reorders
+  // the detail queue.
+  if (keys.includes('kcportal')) {
+    await runPortal({
+      dataDir: path.join(DATA_DIR, 'kc_dajd'),
+      dryRun: process.env.PORTAL_DRY_RUN === 'true',
+      outDir: process.env.PORTAL_OUT_DIR || null,
+      priority: (process.env.PORTAL_PRIORITY || '').split(',').filter(Boolean),
+      forceFullCheck: process.env.PORTAL_FORCE_FULL_CHECK === 'true',
+    });
+    return;
+  }
+
   for (const key of keys) {
     const config = SOURCES[key];
     if (!config) {
-      console.error(`Unknown source "${key}". Valid: ${Object.keys(SOURCES).join(', ')}, wadoc, all`);
+      console.error(`Unknown source "${key}". Valid: ${Object.keys(SOURCES).join(', ')}, kcportal, wadoc, all`);
       process.exitCode = 1;
       continue;
     }
