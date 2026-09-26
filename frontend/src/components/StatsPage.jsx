@@ -3,16 +3,28 @@ import { Link } from 'react-router-dom'
 import Header from './Header'
 import HBarList from './HBarList'
 import { computeStats } from '../statsUtils'
-import { SOURCES } from '../sources'
+import { SOURCES, sourceLabel } from '../sources'
 
-async function loadCombinedLog() {
+async function fetchAll(filename) {
   const results = await Promise.all(
-    SOURCES.map(s => fetch(`./data/${s.id}/change_log.json`).then(r => (r.ok ? r.json() : [])).catch(() => []))
+    SOURCES.map(s => fetch(`./data/${s.id}/${filename}`).then(r => (r.ok ? r.json() : null)).catch(() => null))
   )
-  return results.flat()
+  return results
 }
 
-const TABS = ['Summary', 'Trends', 'Crime Types', 'Bail & Release', 'Agencies', 'Detention', 'Recidivism']
+async function loadCombinedLog() {
+  const perSource = await fetchAll('change_log.json')
+  return perSource.flatMap(l => (Array.isArray(l) ? l : []))
+}
+
+async function loadStatusBySource() {
+  const perSource = await fetchAll('status.json')
+  const bySource = {}
+  SOURCES.forEach((s, i) => { if (perSource[i]) bySource[s.id] = perSource[i] })
+  return bySource
+}
+
+const TABS = ['Summary', 'Trends', 'Crime Types', 'Bail & Release', 'Agencies', 'Detention']
 
 function fmtMoney(n) {
   if (n === null || n === undefined) return '—'
@@ -24,37 +36,85 @@ function fmtDays(n) {
   return `${n.toFixed(1)}d`
 }
 
-function SummaryTab({ stats }) {
+function fmtDate(d) {
+  if (!d) return '—'
+  return d.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
+}
+
+function DataMeta({ stats, status }) {
+  return (
+    <div className="section-note">
+      {stats.totals.totalBookings.toLocaleString()} bookings tracked
+      {stats.totals.dateRange && <> &nbsp;·&nbsp; {fmtDate(stats.totals.dateRange.min)} – {fmtDate(stats.totals.dateRange.max)}</>}
+      <br />
+      Data as of: {SOURCES.map(s => `${s.label} ${status?.[s.id]?.lastUpdated || 'no data yet'}`).join(' · ')}
+    </div>
+  )
+}
+
+function StayLengthTable({ stats }) {
+  return (
+    <div>
+      <div className="section-title">Stay Length by Source</div>
+      <div className="section-note">
+        Only counts releases with a real, source-published release time (labeled "county" internally) — a source
+        with no such times published shows no number rather than a guess based on when our scraper noticed the
+        person gone. King County DAJD only pulls a rolling 60-day booking window, so stays that began more than 60
+        days ago are excluded from this dataset entirely.
+      </div>
+      <table className="stats-table">
+        <thead><tr><th>Source</th><th>n</th><th>Avg</th><th>Median</th></tr></thead>
+        <tbody>
+          {stats.stayLength.map(row => (
+            <tr key={row.source}>
+              <td>{sourceLabel(row.source)}</td>
+              {row.n === 0 ? (
+                <td colSpan={3}>No published release times</td>
+              ) : (
+                <>
+                  <td>{row.n}</td>
+                  <td>{fmtDays(row.avgDays)}</td>
+                  <td>{fmtDays(row.medianDays)}</td>
+                </>
+              )}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  )
+}
+
+function SummaryTab({ stats, status }) {
   const t = stats.totals
   return (
-    <div className="stats-grid">
-      <div className="stat-card">
-        <div className="stat-card-num">{t.totalBookings}</div>
-        <div className="stat-card-label">Total Bookings</div>
+    <div>
+      <DataMeta stats={stats} status={status} />
+      <div className="stats-grid">
+        <div className="stat-card">
+          <div className="stat-card-num">{t.totalBookings}</div>
+          <div className="stat-card-label">Total Bookings</div>
+        </div>
+        <div className="stat-card">
+          <div className="stat-card-num">{t.inCustody}</div>
+          <div className="stat-card-label">In Custody</div>
+        </div>
+        <div className="stat-card">
+          <div className="stat-card-num">{t.released}</div>
+          <div className="stat-card-label">Releases Tracked</div>
+        </div>
+        <div className="stat-card">
+          <div className="stat-card-num">{t.avgCharges?.toFixed(1) ?? '—'}</div>
+          <div className="stat-card-label">Avg Charges / Booking</div>
+          <div className="stat-card-sub">median {t.medianCharges ?? '—'}, max {t.maxCharges}</div>
+        </div>
       </div>
-      <div className="stat-card">
-        <div className="stat-card-num">{t.inCustody}</div>
-        <div className="stat-card-label">In Custody</div>
+      <div className="section-note">
+        "In Custody" includes people on electronic home detention and in other non-jail contract facilities, not
+        just physical jail beds. The same person can appear in both the Kent and King County DAJD counts at once —
+        some Kent-booked people are actually housed at King County's MRJC/KCCF.
       </div>
-      <div className="stat-card">
-        <div className="stat-card-num">{t.released}</div>
-        <div className="stat-card-label">Releases Tracked</div>
-      </div>
-      <div className="stat-card">
-        <div className="stat-card-num">{fmtDays(t.avgStayDays)}</div>
-        <div className="stat-card-label">Avg Stay</div>
-        <div className="stat-card-sub">median {fmtDays(t.medianStayDays)}</div>
-      </div>
-      <div className="stat-card">
-        <div className="stat-card-num">{t.avgCharges?.toFixed(1) ?? '—'}</div>
-        <div className="stat-card-label">Avg Charges / Booking</div>
-        <div className="stat-card-sub">median {t.medianCharges ?? '—'}, max {t.maxCharges}</div>
-      </div>
-      <div className="stat-card">
-        <div className="stat-card-num">{t.pctReleasedWithBail.toFixed(1)}%</div>
-        <div className="stat-card-label">Released w/ Bail Set</div>
-        <div className="stat-card-sub">{t.releasedWithBailCount} of {t.released}</div>
-      </div>
+      <StayLengthTable stats={stats} />
     </div>
   )
 }
@@ -82,37 +142,63 @@ function CrimeTypesTab({ stats }) {
       <HBarList items={severities} />
 
       <div className="section-title">Most Common Charges</div>
-      <div className="section-note">Raw charge text as booked (Whatcom's feed doesn't normalize charge names).</div>
+      <div className="section-note">Raw charge text as booked — not normalized across the 4 sources.</div>
       <HBarList items={topOffenses} />
     </div>
   )
 }
 
+function BailSourceBlock({ row }) {
+  if (!row.unit) {
+    return (
+      <div className="agency-block">
+        <div className="agency-name">{sourceLabel(row.source)}</div>
+        <div className="agency-meta">No bail/bond field published by this source</div>
+      </div>
+    )
+  }
+  return (
+    <div className="agency-block">
+      <div className="agency-name">{sourceLabel(row.source)}</div>
+      <div className="agency-meta">Bail counted once per {row.unit} &nbsp;·&nbsp; n = {row.n}</div>
+      {row.n === 0 ? (
+        <div className="empty">No bail amounts recorded yet.</div>
+      ) : (
+        <>
+          <div className="stats-grid">
+            <div className="stat-card"><div className="stat-card-num">{fmtMoney(row.median)}</div><div className="stat-card-label">Median</div></div>
+            <div className="stat-card"><div className="stat-card-num">{fmtMoney(Math.round(row.mean || 0))}</div><div className="stat-card-label">Mean</div></div>
+            <div className="stat-card"><div className="stat-card-num">{fmtMoney(row.max)}</div><div className="stat-card-label">Max</div></div>
+          </div>
+          <table className="stats-table">
+            <thead><tr><th>Category</th><th>Median</th><th>Mean</th><th>n</th></tr></thead>
+            <tbody>
+              {row.byCategory.map(c => (
+                <tr key={c.category}>
+                  <td>{c.category}</td>
+                  <td>{fmtMoney(c.median)}</td>
+                  <td>{fmtMoney(Math.round(c.mean))}</td>
+                  <td>{c.n}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </>
+      )}
+    </div>
+  )
+}
+
 function BailTab({ stats }) {
-  const b = stats.bail
   return (
     <div>
-      <div className="stats-grid">
-        <div className="stat-card"><div className="stat-card-num">{fmtMoney(b.median)}</div><div className="stat-card-label">Median Bail</div></div>
-        <div className="stat-card"><div className="stat-card-num">{fmtMoney(Math.round(b.mean || 0))}</div><div className="stat-card-label">Mean Bail</div></div>
-        <div className="stat-card"><div className="stat-card-num">{fmtMoney(b.max)}</div><div className="stat-card-label">Max Bail</div></div>
-        <div className="stat-card"><div className="stat-card-num">{b.n}</div><div className="stat-card-label">Charges w/ Bail Set</div></div>
+      <div className="section-note">
+        Bail is never combined across sources — Kirkland's booking-detail page publishes one bond total for the
+        whole booking (copied onto every charge in our data), so it's counted once per booking here. SCORE and Kent
+        both publish a genuine bail figure per charge, so those are counted per charge. King County DAJD's feed has
+        no bail/bond field at all.
       </div>
-      <div className="section-title">Median Bail by Charge Category</div>
-      <div className="section-note">Bail parsed from the appearance-bond amount on each charge (cash alternative excluded).</div>
-      <table className="stats-table">
-        <thead><tr><th>Category</th><th>Median</th><th>Mean</th><th>n</th></tr></thead>
-        <tbody>
-          {b.byCategory.map(row => (
-            <tr key={row.category}>
-              <td>{row.category}</td>
-              <td>{fmtMoney(row.median)}</td>
-              <td>{fmtMoney(Math.round(row.mean))}</td>
-              <td>{row.n}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+      {stats.bail.map(row => <BailSourceBlock key={row.source} row={row} />)}
     </div>
   )
 }
@@ -120,7 +206,7 @@ function BailTab({ stats }) {
 function AgenciesTab({ stats }) {
   return (
     <div>
-      <div className="section-note">Charge count per arresting agency — one arrest can carry multiple charges.</div>
+      <div className="section-note">Only SCORE publishes an arresting agency on its charges — Kent, Kirkland, and King County DAJD don't expose this field, so they aren't represented below.</div>
       <HBarList items={stats.agencies.map(a => ({ name: a.agency, count: a.chargeCount }))} />
       {stats.agencies.map(a => (
         <div className="agency-block" key={a.agency}>
@@ -135,58 +221,58 @@ function AgenciesTab({ stats }) {
   )
 }
 
-function DetentionTab({ stats }) {
+function DetentionSourceBlock({ sourceId, data }) {
   return (
-    <div>
-      <div className="section-note">Released bookings only, ≥2 data points per category. Sorted by average days.</div>
-      <table className="stats-table">
-        <thead><tr><th>Category</th><th>Avg Days</th><th>Median Days</th><th>n</th></tr></thead>
-        <tbody>
-          {stats.detention.map(row => (
-            <tr key={row.category}>
-              <td>{row.category}</td>
-              <td>{fmtDays(row.avgDays)}</td>
-              <td>{fmtDays(row.medianDays)}</td>
-              <td>{row.n}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-      {stats.detention.length === 0 && <div className="empty">Not enough released bookings yet to break this down by category.</div>}
+    <div className="agency-block">
+      <div className="agency-name">{sourceLabel(sourceId)}</div>
+      {data.n === 0 ? (
+        <div className="agency-meta">No published release times</div>
+      ) : (
+        <>
+          <div className="agency-meta">{data.n} county-verified release{data.n !== 1 ? 's' : ''}, ≥2 data points per category shown</div>
+          <table className="stats-table">
+            <thead><tr><th>Category</th><th>Avg Days</th><th>Median Days</th><th>n</th></tr></thead>
+            <tbody>
+              {data.rows.map(row => (
+                <tr key={row.category}>
+                  <td>{row.category}</td>
+                  <td>{fmtDays(row.avgDays)}</td>
+                  <td>{fmtDays(row.medianDays)}</td>
+                  <td>{row.n}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          {data.rows.length === 0 && <div className="empty">Not enough released bookings yet to break this down by category.</div>}
+        </>
+      )}
     </div>
   )
 }
 
-function RecidivismTab({ stats }) {
-  const r = stats.recidivism
+function DetentionTab({ stats }) {
   return (
     <div>
-      <div className="stats-grid">
-        <div className="stat-card"><div className="stat-card-num">{r.repeatRate.toFixed(1)}%</div><div className="stat-card-label">Repeat Rate</div></div>
-        <div className="stat-card"><div className="stat-card-num">{r.repeatCount}</div><div className="stat-card-label">Repeat Individuals</div></div>
-        <div className="stat-card"><div className="stat-card-num">{r.distinctCount}</div><div className="stat-card-label">Unique Individuals Tracked</div></div>
+      <div className="section-note">
+        Detention duration by charge category, per source — never combined across sources (see Stay Length on the
+        Summary tab for why). Only releases with a real, source-published release time are counted. King County
+        DAJD only pulls a rolling 60-day booking window, so stays that began more than 60 days ago are excluded.
       </div>
-      <div className="section-title">Repeat Bookers</div>
-      {r.topRepeaters.length === 0 ? (
-        <div className="empty">No repeat bookings tracked yet — this is a brand-new monitor, so give it time.</div>
-      ) : (
-        <table className="stats-table">
-          <thead><tr><th>Name</th><th>Bookings</th></tr></thead>
-          <tbody>
-            {r.topRepeaters.map(p => <tr key={p.name}><td>{p.name}</td><td>{p.count}</td></tr>)}
-          </tbody>
-        </table>
-      )}
+      {SOURCES.map(s => <DetentionSourceBlock key={s.id} sourceId={s.id} data={stats.detention[s.id]} />)}
     </div>
   )
 }
 
 export default function StatsPage() {
   const [log, setLog] = useState(null)
+  const [status, setStatus] = useState(null)
   const [tab, setTab] = useState('Summary')
 
   useEffect(() => {
-    loadCombinedLog().then(setLog)
+    Promise.all([loadCombinedLog(), loadStatusBySource()]).then(([logData, statusData]) => {
+      setLog(logData)
+      setStatus(statusData)
+    })
   }, [])
 
   const stats = useMemo(() => (log ? computeStats(log) : null), [log])
@@ -207,13 +293,12 @@ export default function StatsPage() {
             ))}
           </div>
           <div className="stats-panel">
-            {tab === 'Summary' && <SummaryTab stats={stats} />}
+            {tab === 'Summary' && <SummaryTab stats={stats} status={status} />}
             {tab === 'Trends' && <TrendsTab stats={stats} />}
             {tab === 'Crime Types' && <CrimeTypesTab stats={stats} />}
             {tab === 'Bail & Release' && <BailTab stats={stats} />}
             {tab === 'Agencies' && <AgenciesTab stats={stats} />}
             {tab === 'Detention' && <DetentionTab stats={stats} />}
-            {tab === 'Recidivism' && <RecidivismTab stats={stats} />}
           </div>
         </>
       )}

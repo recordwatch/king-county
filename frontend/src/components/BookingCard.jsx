@@ -36,7 +36,12 @@ export default function BookingCard({ entry }) {
   const [open, setOpen] = useState(false)
 
   const isReleased = entry.status === 'released'
-  const timeHeld = isReleased ? calcTimeHeld(entry.bookingDate || entry.firstSeen, entry.releasedAt) : null
+  const rawTimeHeld = isReleased ? calcTimeHeld(entry.bookingDate || entry.firstSeen, entry.releasedAt) : null
+  // Only a "county" releaseSource is a real, source-published release time --
+  // 'detected' (our own disappearance-based guess) and 'unverified'
+  // (Kirkland's own real-date column, not independently confirmed) are
+  // approximate, so the duration built from them is labeled as such.
+  const timeHeld = rawTimeHeld && entry.releaseSource !== 'county' ? `about ${rawTimeHeld}` : rawTimeHeld
 
   return (
     <div className={`card ${isReleased ? 'card-released' : 'card-custody'}`}>

@@ -1,6 +1,17 @@
 // Stats helpers for the unlisted Deep Stats page.
 // Charge category/severity are best-effort classifications from raw charge
-// text (no structured charge-class field exists in the Whatcom feed).
+// text (no structured charge-class field exists in any of the 4 sources).
+//
+// Cross-source rules (do not violate without re-reading these comments):
+// - Stay length and bail must never be combined across sources -- each
+//   source's release-time and bail semantics are different enough (see
+//   below) that a blended average would be meaningless or misleading.
+// - Stay length only ever uses releaseSource === 'county' (a real,
+//   source-published release timestamp that parses as a valid date) --
+//   'detected'/'unverified'/null entries have no trustworthy release time.
+// - No individual's name appears anywhere in stats output.
+
+import { SOURCES } from './sources'
 
 function stripSuffix(charge) {
   return charge
@@ -88,44 +99,125 @@ function topN(counter, n) {
     .map(([name, count]) => ({ name, count }))
 }
 
+function groupBySource(log) {
+  const bySource = {}
+  for (const s of SOURCES) bySource[s.id] = []
+  for (const e of log) {
+    if (!bySource[e.source]) bySource[e.source] = []
+    bySource[e.source].push(e)
+  }
+  return bySource
+}
+
+// Only entries with a real, source-published, validly-parsing release time
+// are trustworthy for a duration calculation -- 'detected' (our own
+// disappearance-based guess) and 'unverified' (Kirkland's own real-date
+// column, not independently confirmed) are not.
+function countyReleased(entries) {
+  return entries.filter(e => e.status === 'released' && e.releaseSource === 'county')
+}
+
+function stayStatsFor(entries) {
+  const stays = countyReleased(entries)
+    .map(e => daysBetween(e.bookingDate || e.firstSeen, e.releasedAt))
+    .filter(d => d !== null)
+  return { n: stays.length, avgDays: mean(stays), medianDays: median(stays) }
+}
+
+// Kirkland's booking-detail page publishes one "Total Bond Amount" for the
+// whole booking, and the scraper (scrapers/kirkland.js parseDetail) copies
+// that same value onto every charge on the booking -- summing/averaging
+// per-charge would count one bail figure 2-3x over on a multi-charge
+// booking. SCORE and Kent both publish a genuine per-charge bail/bond
+// amount, so those two are counted per charge. KC DAJD's feed has no
+// bail/bond field at all (confirmed against its raw schema).
+const BAIL_UNIT = { score: 'charge', kent: 'charge', kirkland: 'booking', kc_dajd: null }
+
+function bailStatsFor(entries, unit) {
+  if (!unit) return { unit: null, n: 0, median: null, mean: null, max: null, byCategory: [] }
+
+  const values = []
+  const byCategory = {}
+  const pushCategorized = (amt, categories) => {
+    values.push(amt)
+    for (const cat of categories) {
+      byCategory[cat] = byCategory[cat] || []
+      byCategory[cat].push(amt)
+    }
+  }
+
+  if (unit === 'booking') {
+    for (const e of entries) {
+      const charges = e.charges || []
+      const amt = charges.map(c => parseBail(c.bail)).find(v => v > 0)
+      if (!amt) continue
+      const cats = new Set(charges.filter(c => c.charge).map(c => categorizeCharge(c.charge)))
+      pushCategorized(amt, cats.size ? cats : ['Other'])
+    }
+  } else {
+    for (const e of entries) {
+      for (const c of e.charges || []) {
+        const amt = parseBail(c.bail)
+        if (!amt || amt <= 0) continue
+        pushCategorized(amt, [categorizeCharge(c.charge)])
+      }
+    }
+  }
+
+  return {
+    unit,
+    n: values.length,
+    median: median(values),
+    mean: mean(values),
+    max: values.length ? Math.max(...values) : null,
+    byCategory: Object.entries(byCategory)
+      .map(([category, vals]) => ({ category, median: median(vals), mean: mean(vals), n: vals.length }))
+      .sort((a, b) => b.median - a.median),
+  }
+}
+
 export function computeStats(log) {
+  const bySource = groupBySource(log)
+  const sourceIds = SOURCES.map(s => s.id)
+
   const totalBookings = log.length
   const inCustody = log.filter(e => e.status === 'in_custody')
   const released = log.filter(e => e.status === 'released')
 
-  // --- Summary ---
-  const stays = released.map(e => daysBetween(e.bookingDate || e.firstSeen, e.releasedAt)).filter(d => d !== null)
-  const chargeCounts = log.map(e => (e.charges || []).length)
-  const releasesWithBail = released.filter(e =>
-    (e.charges || []).some(c => (parseBail(c.bail) || 0) > 0)
-  )
+  const allDates = log
+    .map(e => new Date(e.bookingDate || e.firstSeen))
+    .filter(d => !isNaN(d.getTime()))
+  const dateRange = allDates.length
+    ? { min: new Date(Math.min(...allDates)), max: new Date(Math.max(...allDates)) }
+    : null
 
+  // --- Summary ---
+  const chargeCounts = log.map(e => (e.charges || []).length)
   const totals = {
     totalBookings,
     inCustody: inCustody.length,
     released: released.length,
-    avgStayDays: mean(stays),
-    medianStayDays: median(stays),
     avgCharges: mean(chargeCounts),
     medianCharges: median(chargeCounts),
     maxCharges: chargeCounts.length ? Math.max(...chargeCounts) : 0,
-    pctReleasedWithBail: released.length ? (releasesWithBail.length / released.length) * 100 : 0,
-    releasedWithBailCount: releasesWithBail.length,
+    dateRange,
   }
 
+  // --- Stay length (per source only -- never combined, see file header) ---
+  const stayLength = sourceIds.map(id => ({ source: id, ...stayStatsFor(bySource[id]) }))
+
   // --- Trends (bookings by day of week) ---
-  // Uses the actual bookingDate (real arrest timestamp), not firstSeen —
-  // staleness doesn't matter here since only the weekday name is used, and bookingDate
-  // reflects when people were actually arrested rather than when our scraper noticed them.
+  // Uses the actual bookingDate (real arrest timestamp), not firstSeen --
+  // staleness doesn't matter here since only the weekday name is used, and
+  // bookingDate reflects when people were actually arrested rather than
+  // when our scraper noticed them.
   const WEEKDAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
   const weekdayCounts = new Array(7).fill(0)
   for (const e of log) {
     const d = new Date(e.bookingDate || e.firstSeen)
     if (!isNaN(d.getTime())) weekdayCounts[d.getDay()] += 1
   }
-  const byWeekday = WEEKDAY_NAMES.map((name, i) => ({ name, count: weekdayCounts[i] }))
-
-  const trends = { byWeekday }
+  const trends = { byWeekday: WEEKDAY_NAMES.map((name, i) => ({ name, count: weekdayCounts[i] })) }
 
   // --- Crime Types ---
   const categoryCounts = {}
@@ -150,36 +242,17 @@ export function computeStats(log) {
     topOffenses: topN(offenseCounts, 15),
   }
 
-  // --- Bail & Release ---
-  const bailValues = []
-  const bailByCategory = {}
-  for (const e of log) {
-    for (const c of e.charges || []) {
-      const amt = parseBail(c.bail)
-      if (amt === null || amt <= 0) continue
-      bailValues.push(amt)
-      const cat = categorizeCharge(c.charge)
-      bailByCategory[cat] = bailByCategory[cat] || []
-      bailByCategory[cat].push(amt)
-    }
-  }
-  const bail = {
-    median: median(bailValues),
-    mean: mean(bailValues),
-    max: bailValues.length ? Math.max(...bailValues) : null,
-    n: bailValues.length,
-    byCategory: Object.entries(bailByCategory)
-      .map(([category, vals]) => ({ category, median: median(vals), mean: mean(vals), n: vals.length }))
-      .sort((a, b) => b.median - a.median),
-  }
+  // --- Bail (per source only -- never combined, see file header) ---
+  const bail = sourceIds.map(id => ({ source: id, ...bailStatsFor(bySource[id], BAIL_UNIT[id]) }))
 
-  // --- Agencies ---
+  // --- Agencies (SCORE only -- the only source that publishes an arresting
+  // agency; see scrapers/score.js) ---
   const agencyCharges = {}
-  for (const e of log) {
+  for (const e of bySource.score || []) {
     for (const c of e.charges || []) {
-      const agency = c.arrestAgency || e.bookingAgency || 'Unknown'
-      agencyCharges[agency] = agencyCharges[agency] || {}
-      if (c.charge) agencyCharges[agency][c.charge] = (agencyCharges[agency][c.charge] || 0) + 1
+      if (!c.arrestAgency || !c.charge) continue
+      agencyCharges[c.arrestAgency] = agencyCharges[c.arrestAgency] || {}
+      agencyCharges[c.arrestAgency][c.charge] = (agencyCharges[c.arrestAgency][c.charge] || 0) + 1
     }
   }
   const agencies = Object.entries(agencyCharges)
@@ -189,37 +262,27 @@ export function computeStats(log) {
     })
     .sort((a, b) => b.chargeCount - a.chargeCount)
 
-  // --- Detention duration by category (released only) ---
-  const detentionByCategory = {}
-  for (const e of released) {
-    const days = daysBetween(e.bookingDate || e.firstSeen, e.releasedAt)
-    if (days === null) continue
-    const cats = new Set((e.charges || []).filter(c => c.charge).map(c => categorizeCharge(c.charge)))
-    for (const cat of cats) {
-      detentionByCategory[cat] = detentionByCategory[cat] || []
-      detentionByCategory[cat].push(days)
+  // --- Detention duration by category (per source, county-verified releases only) ---
+  const detention = {}
+  for (const id of sourceIds) {
+    const byCategory = {}
+    for (const e of countyReleased(bySource[id])) {
+      const days = daysBetween(e.bookingDate || e.firstSeen, e.releasedAt)
+      if (days === null) continue
+      const cats = new Set((e.charges || []).filter(c => c.charge).map(c => categorizeCharge(c.charge)))
+      for (const cat of cats) {
+        byCategory[cat] = byCategory[cat] || []
+        byCategory[cat].push(days)
+      }
+    }
+    detention[id] = {
+      n: countyReleased(bySource[id]).length,
+      rows: Object.entries(byCategory)
+        .filter(([, vals]) => vals.length >= 2)
+        .map(([category, vals]) => ({ category, avgDays: mean(vals), medianDays: median(vals), n: vals.length }))
+        .sort((a, b) => b.avgDays - a.avgDays),
     }
   }
-  const detention = Object.entries(detentionByCategory)
-    .filter(([, vals]) => vals.length >= 2)
-    .map(([category, vals]) => ({ category, avgDays: mean(vals), medianDays: median(vals), n: vals.length }))
-    .sort((a, b) => b.avgDays - a.avgDays)
 
-  // --- Recidivism ---
-  const byPerson = {}
-  for (const e of log) {
-    const key = e.nameId || e.name
-    byPerson[key] = byPerson[key] || { name: e.name, count: 0 }
-    byPerson[key].count += 1
-  }
-  const people = Object.values(byPerson)
-  const repeaters = people.filter(p => p.count > 1)
-  const recidivism = {
-    distinctCount: people.length,
-    repeatCount: repeaters.length,
-    repeatRate: people.length ? (repeaters.length / people.length) * 100 : 0,
-    topRepeaters: repeaters.sort((a, b) => b.count - a.count).slice(0, 20),
-  }
-
-  return { totals, trends, crimeTypes, bail, agencies, detention, recidivism }
+  return { totals, trends, crimeTypes, stayLength, bail, agencies, detention }
 }
