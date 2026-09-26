@@ -24,6 +24,11 @@ const SOURCES = {
     detailBatchLimit: 40,
     backfillBatch: 50,
     fetchReleaseTimes: score.fetchReleaseTimes,
+    recheckDetected: score.recheckDetectedReleases,
+    // Sized comfortably above the current ~80-record backlog so it clears in
+    // one run; recheckDetectedReleases spaces individual requests out so
+    // this doesn't turn into a burst against SCORE.
+    recheckBatch: 150,
   },
   kent: {
     sourceId: 'kent',

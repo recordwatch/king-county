@@ -105,7 +105,10 @@ export async function scrapeDetailBatch(nameNumbers) {
       if (isUpdatingPlaceholder(res.data)) continue;
       const $ = cheerio.load(res.data);
       const charges = parseOffenses($);
-      results[nn] = { charges, complete: charges.length > 0 };
+      // Booking List comes from the same page load as Offenses -- no extra
+      // request needed to also store this person's full booking history.
+      const bookingHistory = parseBookingList($);
+      results[nn] = { charges, bookingHistory, complete: charges.length > 0 };
     } catch (err) {
       console.warn(`  Detail fetch failed for nn=${nn}:`, err.message);
     }
@@ -113,20 +116,43 @@ export async function scrapeDetailBatch(nameNumbers) {
   return results;
 }
 
-// The per-person view page's "Booking List" section has a "Release Type"
-// column (e.g. "RELEASED - COURT ORDER", "RELEASED - SENTENCE COMPLETED",
-// "PERSONAL RECOGNIZANCE") that /recentreleases itself doesn't expose --
-// used by the WA DOC cross-reference to skip obvious non-transfers.
+// The per-person view page's "Booking List" section publishes that person's
+// full booking history at SCORE -- confirmed live back to 2012+ for at least
+// one person -- with all 4 columns: Booking Number, Date Booked, Date
+// Released, and Release Type (e.g. "RELEASED - COURT ORDER", "RELEASED -
+// SENTENCE COMPLETED", "PERSONAL RECOGNIZANCE"). Still fetchable long after
+// someone's released -- confirmed live, the page just shows "No current
+// custody booking record" for Current Booking and renders Booking List as
+// normal. Used both to store a person's booking history and, in
+// recheckDetectedReleases() below, to find the authoritative release time
+// for a booking /recentreleases couldn't give us.
 function parseBookingList($) {
   const rows = [];
   $('h1').filter((_, el) => cleanText($(el).text()) === 'Booking List').each((_, h1) => {
     for (const f of parsePanels($, $(h1).next('.list'))) {
       if (!f['booking number']) continue;
-      rows.push({ bookingNumber: f['booking number'], releaseType: f['release type'] || null });
+      rows.push({
+        bookingNumber: f['booking number'],
+        dateBooked: f['date booked'] || null,
+        dateReleased: f['date released'] || null,
+        releaseType: f['release type'] || null,
+      });
     }
   });
   return rows;
 }
+
+function isValidScoreDate(s) {
+  return !!s && !isNaN(new Date(s).getTime());
+}
+
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+// Space out /view requests during the recheck pass below so a backlog of
+// pending releases doesn't turn into a burst of simultaneous hits on SCORE.
+const RECHECK_DELAY_MS = 400;
 
 // SCORE's own /recentreleases feed publishes the authoritative release
 // timestamp for each booking -- using it instead of our own scrape-detection
@@ -172,4 +198,51 @@ export async function fetchReleaseTimes(releasedIds = []) {
   }
 
   return rows;
+}
+
+// A release can only be marked 'detected' (our own scrape-detection time,
+// not a source-published one) when /recentreleases couldn't supply a real
+// timestamp for it -- either the whole page was unusable (e.g. mid-rebuild)
+// or that specific booking's row hadn't posted there yet. Either way, that
+// same booking's Date Released eventually shows up on the person's own
+// Booking List (confirmed live), so later runs keep re-checking pending
+// 'detected' releases against it and upgrade to 'county' once it appears.
+// `pending` is [{ idnum, bookingNumber }]; idnum may be a compound
+// "nn:bookingNumber" rebooking-fork key, so the raw nn is recovered the same
+// way runScraper.js does elsewhere. Multiple pending entries for the same nn
+// (e.g. an old released booking plus a newer one) are grouped so that nn's
+// Booking List is only fetched once. Returns a Map<idnum, { releasedAt?,
+// releaseReason?, bookingHistory }> -- callers should only treat an entry as
+// upgraded when `releasedAt` is present.
+export async function recheckDetectedReleases(pending) {
+  const byNn = new Map();
+  for (const entry of pending) {
+    const nn = entry.idnum.split(':')[0];
+    if (!byNn.has(nn)) byNn.set(nn, []);
+    byNn.get(nn).push(entry);
+  }
+
+  const results = new Map();
+  for (const [nn, entries] of byNn) {
+    try {
+      const res = await axios.post(VIEW_URL, new URLSearchParams({ nn }), { headers: HEADERS, timeout: 20000 });
+      if (!isUpdatingPlaceholder(res.data)) {
+        const $ = cheerio.load(res.data);
+        const bookingHistory = parseBookingList($);
+        for (const entry of entries) {
+          const match = bookingHistory.find(b => b.bookingNumber === entry.bookingNumber);
+          const upgrade = { bookingHistory };
+          if (match && isValidScoreDate(match.dateReleased)) {
+            upgrade.releasedAt = match.dateReleased;
+            upgrade.releaseReason = match.releaseType;
+          }
+          results.set(entry.idnum, upgrade);
+        }
+      }
+    } catch (err) {
+      console.warn(`  Detected-release recheck failed for nn=${nn}:`, err.message);
+    }
+    await sleep(RECHECK_DELAY_MS);
+  }
+  return results;
 }
