@@ -23,11 +23,12 @@ on:
 permissions:
   contents: write
 
-# Same group as every other scrape workflow -- this writes data/kc_dajd/,
-# the same files as scrape-kcdajd.yml, and all of them push to the same
-# history. Queue rather than cancel, as there.
+# Shared with scrape-kcdajd.yml only -- both write data/kc_dajd, so they
+# must never run at the same time. Other workflows write other files and
+# run in their own groups; the commit step's push retry handles the git-level
+# race with them. Queue rather than cancel.
 concurrency:
-  group: scrape-live-sources
+  group: scrape-kc-dajd
   cancel-in-progress: false
 
 jobs:
@@ -110,8 +111,19 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add data/kc_dajd
           git diff --cached --quiet || git commit -m "chore: update King County DAJD data from portal [skip ci]"
-          git pull --no-rebase -X ours
-          git push
+          # Push races are expected now that the scrape workflows no longer
+          # share one concurrency group: if another workflow pushed first,
+          # pull its commit in and try again, up to 3 retries.
+          for attempt in 0 1 2 3; do
+            if [ "$attempt" -gt 0 ]; then
+              echo "Push rejected -- retry $attempt of 3 after pulling the newer commit"
+              sleep $((attempt * 5))
+            fi
+            git pull --no-rebase -X ours
+            if git push; then exit 0; fi
+          done
+          echo "Push still rejected after 3 retries"
+          exit 1
 
       - name: Deploy to GitHub Pages
         if: ${{ !inputs.dry_run }}
