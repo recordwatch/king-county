@@ -9,6 +9,16 @@ Established during the 2026-09 scraper audit/hardening work, apply to all future
 - **Never commit until the user replies "commit"** — make and diff changes, show the diff, then stop and wait. This applies for the rest of this engagement regardless of how the request is phrased, unless the user says otherwise.
 - **After pushing any data backfill, wait for the next scrape run and confirm the backfill counts survived.** Don't declare a backfill complete until the post-run data is verified.
 
+## Pending verification (check at the start of every session)
+Behavior that's built and merged but hasn't been proven in production yet. Check each item against the committed data and the Actions logs. Report what you found. Remove an item only once it's confirmed, and note the date and evidence where the change is documented.
+1. **The next Socrata republish of KC DAJD data** (the 2026-09-27 sync, commit e47f7d1, changed 0 records, so this path hasn't run yet). Once a daily `scrape-kcdajd.yml` run actually changes `data/kc_dajd`, check:
+   - Portal-checked releases (`statusSource: 'portal'`) keep their portal status, `releasedAt` and `releaseSource: 'county'`. There were 58 of these on 2026-09-27, including PATTERSON 2026-012367, HUBER 2026-012356 and JOLICOUER.
+   - Charges merge without duplicates: the displayed `charges` is the portal's list with court/cause/RCW added, and Socrata-only charges go to `unmatchedSocrataCharges`.
+   - The portal-only canary **TONIA, SOOTAGA (2026-013178)** stays one record, keyed by booking number, with the portal's status kept.
+   - How Socrata writes old 9-digit booking numbers (e.g. `221005753`). This is still unverified. Check whether they match the portal's form under `lib/bookingNumber.js`.
+2. **The portal workflow fires on its schedule**: at least one `scrape-kcportal.yml` run with event `schedule`, not just `workflow_dispatch`. Also check that the **145 `portalMissing` bookings** (count as of 2026-09-27) are going down run over run.
+3. **The commit-step push retry has fired at least once** in some workflow's logs ("Push rejected -- retry N of 3") and the run still succeeded.
+
 ## What it is
 A public jail roster monitor covering King County, WA — but unlike the sibling
 county repos, "King County" isn't one sheriff's feed. It's 4 independently
