@@ -345,6 +345,7 @@ body {
   border-bottom: 1px solid #2A2E32;
   color: #C9B98F;
 }
+.stats-table .stats-subrow td { color: #8B9298; font-size: 0.68rem; }
 .stats-table th {
   color: #8B9298;
   text-transform: uppercase;

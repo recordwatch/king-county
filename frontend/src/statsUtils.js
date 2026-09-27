@@ -125,6 +125,109 @@ function stayStatsFor(entries) {
   return { n: stays.length, avgDays: mean(stays), medianDays: median(stays) }
 }
 
+// --- Published release reasons (SCORE and KC DAJD only; Kent and Kirkland
+// publish none) ---
+//
+// SCORE: every Release Type on the person's Booking List rows for this
+// booking number (SCORE sometimes lists one booking on two rows with
+// different types), else the stored releaseReason. The stored field alone
+// misses 59 releases and keeps only the first of two types.
+//
+// KC DAJD: Socrata's per-charge release_reason values, else the stored
+// releaseReason. The stored field prefers a non-bail reason when charges
+// differ (it's tuned for the WA DOC check), and is missing on 76 older
+// releases that left the 60-day window before it existed. The portal's
+// per-charge codes are not used: they're charge dispositions ("Investigated
+// and Charged", "Reduced Charge"), and often differ across one booking's
+// charges. Portal-only releases have no published reason until Socrata
+// republishes.
+export function releaseReasonsFor(e) {
+  let reasons = []
+  if (e.source === 'score') {
+    reasons = (e.bookingHistory || []).filter(b => b.bookingNumber === e.bookingNumber).map(b => b.releaseType)
+  } else if (e.source === 'kc_dajd') {
+    reasons = (e.charges || []).map(c => c.releaseReason)
+  } else {
+    return []
+  }
+  reasons = [...new Set(reasons.filter(Boolean))]
+  return reasons.length ? reasons : (e.releaseReason ? [e.releaseReason] : [])
+}
+
+// Grouping for the published reasons -- each source keeps its own wording
+// (shown under each group) and is never combined with another source.
+const REASON_GROUPS = [
+  ['Transfer to another agency', /TRANSFER/i],
+  ['Bail or bond', /\bBAIL\b|\bBOND\b/i],
+  ['Personal recognizance', /PERSONAL RECOGNIZANCE/i],
+  ['Court order / court action', /COURT ORDER|COURT RELEASE|COURT ACTION/i],
+  ['Sentence completed', /SENTENCE COMPLETED|SENTENCE EXPIRED/i],
+  ['Dismissed / not charged', /DISMISSED|NO CHARGE/i],
+]
+export const TRANSFER_GROUP = REASON_GROUPS[0][0]
+export const BAIL_GROUP = REASON_GROUPS[1][0]
+
+export function reasonGroup(reason) {
+  for (const [name, re] of REASON_GROUPS) if (re.test(reason)) return name
+  return 'Other'
+}
+
+function releaseGroupsFor(e) {
+  return new Set(releaseReasonsFor(e).map(reasonGroup))
+}
+
+function releaseReasonStatsFor(entries) {
+  const released = entries.filter(e => e.status === 'released')
+  const groups = {}
+  let n = 0, multi = 0, bail = 0
+  const dates = []
+  for (const e of released) {
+    const reasons = releaseReasonsFor(e)
+    if (!reasons.length) continue
+    n++
+    const gs = new Set(reasons.map(reasonGroup))
+    if (gs.size > 1) multi++
+    if (gs.has(BAIL_GROUP)) bail++
+    for (const r of reasons) {
+      const g = reasonGroup(r)
+      groups[g] = groups[g] || { count: 0, reasons: {} }
+      groups[g].reasons[r] = (groups[g].reasons[r] || 0) + 1
+    }
+    for (const g of gs) groups[g].count++
+    const d = parseEntryDate(e.source, e.releasedAt)
+    if (!isNaN(d.getTime())) dates.push(d)
+  }
+  return {
+    n,
+    noReason: released.length - n,
+    multi,
+    bail,
+    bailPct: n ? (bail / n) * 100 : null,
+    dateRange: dates.length ? { min: new Date(Math.min(...dates)), max: new Date(Math.max(...dates)) } : null,
+    groups: Object.entries(groups)
+      .map(([name, g]) => ({ name, count: g.count, pct: (g.count / n) * 100, reasons: topN(g.reasons, 20) }))
+      .sort((a, b) => b.count - a.count),
+  }
+}
+
+// Stay length split by whether the release was a transfer to another agency
+// -- a transfer ends this jail's stay without the person leaving custody.
+// Releases with no published reason (KC DAJD bookings confirmed only by the
+// jail lookup, until Socrata republishes) can't be put on either side, so
+// they're left out of the split and counted in `noReason`; they stay in the
+// all-releases row.
+function staySplitFor(entries) {
+  const withReason = entries.filter(e => releaseReasonsFor(e).length > 0)
+  const isTransfer = e => releaseGroupsFor(e).has(TRANSFER_GROUP)
+  return {
+    excludingTransfers: stayStatsFor(withReason.filter(e => !isTransfer(e))),
+    transfersOnly: stayStatsFor(withReason.filter(isTransfer)),
+    noReason: stayStatsFor(entries).n - stayStatsFor(withReason).n,
+  }
+}
+
+const RELEASE_REASON_SOURCES = ['score', 'kc_dajd']
+
 // Kirkland's booking-detail page publishes one "Total Bond Amount" for the
 // whole booking, and the scraper (scrapers/kirkland.js parseDetail) copies
 // that same value onto every charge on the booking -- summing/averaging
@@ -205,7 +308,16 @@ export function computeStats(log) {
   }
 
   // --- Stay length (per source only -- never combined, see file header) ---
-  const stayLength = sourceIds.map(id => ({ source: id, ...stayStatsFor(bySource[id]) }))
+  const stayLength = sourceIds.map(id => ({
+    source: id,
+    ...stayStatsFor(bySource[id]),
+    split: RELEASE_REASON_SOURCES.includes(id) ? staySplitFor(bySource[id]) : null,
+  }))
+
+  // --- How people left custody (published release reasons, per source) ---
+  const releaseReasons = Object.fromEntries(
+    sourceIds.map(id => [id, RELEASE_REASON_SOURCES.includes(id) ? releaseReasonStatsFor(bySource[id]) : null])
+  )
 
   // --- Trends (bookings by day of week) ---
   // Uses the actual bookingDate (real arrest timestamp), not firstSeen --
@@ -335,5 +447,5 @@ export function computeStats(log) {
     kc_dajd: null,
   }
 
-  return { totals, trends, crimeTypes, stayLength, bail, agencies, detention, repeatRates }
+  return { totals, trends, crimeTypes, stayLength, releaseReasons, bail, agencies, detention, repeatRates }
 }
