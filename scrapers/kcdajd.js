@@ -1,11 +1,12 @@
 import axios from 'axios';
+import { normalizeBookingNumber } from '../lib/bookingNumber.js';
 
-// King County doesn't run a live browsable "who's in custody right now"
-// portal for KCCF/MRJC — the public DAJD lookup (dajd-jms.powerappsportals.us)
-// is search-by-last-name only, no bulk/browse mode. The only bulk source is
-// this Socrata Open Data feed, which is a booking *event* log (one row per
-// charge, re-published every few days — NOT real-time) rather than a live
-// roster. Resource id j56h-zgnm is stable even though the dataset's public
+// King County's Socrata Open Data booking feed -- a booking *event* log (one
+// row per charge, republished every 1-2 weeks, NOT real-time) rather than a
+// live roster. Current custody status comes from the DAJD lookup portal
+// instead (scrapers/kcportal.js, lib/runPortal.js), which does have bulk
+// views; this feed still supplies court/cause/RCW charge detail and release
+// reasons. Resource id j56h-zgnm is stable even though the dataset's public
 // title/date-range gets renamed every year.
 const RESOURCE_URL = 'https://data.kingcounty.gov/resource/j56h-zgnm.json';
 
@@ -13,14 +14,14 @@ const RESOURCE_URL = 'https://data.kingcounty.gov/resource/j56h-zgnm.json';
 // confirmed live -- ~31k of ~40k don't have it populated). When present it
 // distinguishes King County Correctional Facility, Maleng Regional Justice
 // Center, Community Correction Division, and Electronic Home Detention.
-const FACILITY_LABEL = 'King County DAJD (KCCF/MRJC)';
+export const FACILITY_LABEL = 'King County DAJD (KCCF/MRJC)';
 
 // Pull a rolling window rather than the full ~13-month/40k-row history —
 // this is a monitor, not a backfill of the county's whole archive (which
 // stays queryable live at data.kingcounty.gov if anyone needs it). A wide
 // enough window to safely cover anyone still in custody plus recent
 // bookings/releases for the log.
-const WINDOW_DAYS = 60;
+export const WINDOW_DAYS = 60;
 const PAGE_SIZE = 1000;
 
 function toISODate(d) {
@@ -57,10 +58,12 @@ function formatName(row) {
 
 // Groups per-charge rows into one booking entry each, matching the shared
 // data shape (one entry per booking, charges[] nested inside).
-function groupIntoBookings(rows) {
+export function groupIntoBookings(rows) {
   const byBooking = new Map();
   for (const row of rows) {
-    const id = row.book_of_arrest_number;
+    // Same normalizer the portal scraper uses -- the booking number is the
+    // only key the two KC DAJD sources are matched on.
+    const id = normalizeBookingNumber(row.book_of_arrest_number);
     if (!byBooking.has(id)) byBooking.set(id, []);
     byBooking.get(id).push(row);
   }

@@ -18,7 +18,7 @@ export default function StatBar({ status }) {
               <span className="source-stat-label">{s.label}</span>
               <span className="source-stat-num">{src ? src.inCustody : '—'}</span>
               <span className="source-stat-cadence">{src ? src.lastUpdated : 'no data yet'}</span>
-              {s.lagNote && <span className="source-stat-cadence source-stat-lag">{s.lagNote}</span>}
+              {s.totalsNote && <span className="source-stat-cadence source-stat-lag">{s.totalsNote}</span>}
             </div>
           )
         })}

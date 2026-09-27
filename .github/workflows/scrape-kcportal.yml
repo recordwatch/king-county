@@ -1,0 +1,121 @@
+name: Scrape & Deploy (King County DAJD portal)
+
+# Keeps King County DAJD custody status current from the county's live DAJD
+# lookup portal, between the Socrata feed's 1-2-week republishes (see
+# lib/runPortal.js and CLAUDE.md). The portal needs a real browser, so this
+# is the only workflow that installs Playwright's Chromium. Every 2 hours:
+# the two 24-hour views give a 24-hour window, so this still sees each
+# booking/release many times even when GitHub skips scheduled runs.
+on:
+  schedule:
+    - cron: '17 */2 * * *'
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Dry run: write results to an artifact instead of data/'
+        type: boolean
+        default: false
+      force_full_check:
+        description: 'Run the full in-custody check even if one ran in the last 20 hours'
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+# Same group as every other scrape workflow -- this writes data/kc_dajd/,
+# the same files as scrape-kcdajd.yml, and all of them push to the same
+# history. Queue rather than cancel, as there.
+concurrency:
+  group: scrape-live-sources
+  cancel-in-progress: false
+
+jobs:
+  scrape-and-deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # A queued run was triggered (and its commit fixed) before whatever ran
+      # ahead of it in the concurrency group pushed. actions/checkout checks
+      # out that triggering commit, so without this a queued run would scrape
+      # on stale data/kc_dajd and its push would overwrite the other
+      # workflow's changes. scrape-kcdajd.yml and scrape-kcportal.yml both
+      # write data/kc_dajd.
+      - name: Sync to latest main before scraping
+        run: |
+          git fetch origin main
+          git checkout -B main origin/main
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install scraper dependencies
+        run: npm install
+
+      - name: Cache Playwright Chromium
+        id: pw-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-chromium-${{ hashFiles('package-lock.json') }}
+
+      - name: Install Playwright Chromium
+        if: steps.pw-cache.outputs.cache-hit != 'true'
+        run: npx playwright install --with-deps chromium
+
+      - name: Install Playwright system dependencies
+        if: steps.pw-cache.outputs.cache-hit == 'true'
+        run: npx playwright install-deps chromium
+
+      - name: Run King County DAJD portal check
+        env:
+          PORTAL_DRY_RUN: ${{ inputs.dry_run && 'true' || 'false' }}
+          PORTAL_OUT_DIR: ${{ runner.temp }}/kcportal-dry-run
+          PORTAL_FORCE_FULL_CHECK: ${{ inputs.force_full_check && 'true' || 'false' }}
+        run: node scrape.js kcportal
+
+      - name: Upload dry-run output
+        if: inputs.dry_run
+        uses: actions/upload-artifact@v4
+        with:
+          name: kcportal-dry-run
+          path: ${{ runner.temp }}/kcportal-dry-run
+
+      - name: Copy data to frontend public
+        if: ${{ !inputs.dry_run }}
+        run: |
+          mkdir -p frontend/public/data
+          cp -r data/* frontend/public/data/
+
+      - name: Install frontend dependencies
+        if: ${{ !inputs.dry_run }}
+        run: cd frontend && npm install
+
+      - name: Build frontend
+        if: ${{ !inputs.dry_run }}
+        run: cd frontend && npm run build
+
+      - name: Commit data files
+        if: ${{ !inputs.dry_run }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add data/kc_dajd
+          git diff --cached --quiet || git commit -m "chore: update King County DAJD data from portal [skip ci]"
+          git pull --no-rebase -X ours
+          git push
+
+      - name: Deploy to GitHub Pages
+        if: ${{ !inputs.dry_run }}
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./frontend/dist

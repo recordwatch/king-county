@@ -10,23 +10,28 @@ export const SOURCES = [
   { id: 'kent', label: 'Kent', cadence: 'Live · runs scheduled every 10 min, actual timing varies' },
   { id: 'kirkland', label: 'Kirkland', cadence: 'Live · runs scheduled every 10 min, actual timing varies' },
   { id: 'kc_dajd', label: 'King County DAJD', cadence: 'Periodic · the county republishes this dataset every 1–2 weeks, not live',
-    // Shown wherever this source's in-custody/released status appears --
-    // the Socrata feed it comes from is republished roughly every 1-2 weeks,
-    // so a status can be stale by that much (see CLAUDE.md's KC DAJD quirks).
-    lagNote: 'Status from a county dataset that runs 1–2 weeks behind' },
+    // Per record: only on bookings the DAJD portal hasn't checked yet
+    // (entry.statusSource !== 'portal') -- their status still comes from the
+    // Socrata feed, republished roughly every 1-2 weeks. Portal-checked
+    // records' status is current as of the last portal run.
+    lagNote: 'Status from a county dataset that runs 1–2 weeks behind',
+    // On counts/totals that include this source.
+    totalsNote: "Status from the county's jail lookup, checked about every 2 hours, with some details from a dataset that runs 1–2 weeks behind" },
 ]
 
 export function sourceLabel(id) {
   return SOURCES.find(s => s.id === id)?.label || id
 }
 
-export function sourceLagNote(id) {
-  return SOURCES.find(s => s.id === id)?.lagNote || null
+// The note for one record, or null once the DAJD portal has checked it.
+export function entryLagNote(entry) {
+  if (entry.statusSource === 'portal') return null
+  return SOURCES.find(s => s.id === entry.source)?.lagNote || null
 }
 
-// For totals that sum every source's in-custody count -- names whichever
-// sources carry a lagNote so the combined number isn't read as fully live.
+// For totals that sum every source's in-custody count.
 export function combinedLagNote() {
-  const lagging = SOURCES.filter(s => s.lagNote).map(s => s.label)
-  return lagging.length ? `Includes ${lagging.join(', ')}, whose status runs 1–2 weeks behind` : null
+  return SOURCES.filter(s => s.totalsNote)
+    .map(s => `${s.label}: ${s.totalsNote.charAt(0).toLowerCase()}${s.totalsNote.slice(1)}`)
+    .join(' · ') || null
 }
