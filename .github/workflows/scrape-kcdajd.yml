@@ -12,17 +12,16 @@ on:
 permissions:
   contents: write
 
-# Same group as scrape.yml -- both workflows commit/push to the same repo
-# (different data files, but the same git history), so letting them run
-# simultaneously risks a race at the git level regardless of which files
-# each touches. Queue instead of canceling for the same reason as there.
-concurrency:
-  group: scrape-live-sources
-  cancel-in-progress: false
-
 jobs:
-  scrape-and-deploy:
+  scrape:
     runs-on: ubuntu-latest
+    # Shared with scrape-kcportal.yml only -- both write data/kc_dajd, so they
+    # must never run at the same time. Other workflows write other files and
+    # run in their own groups; the commit step's push retry handles the git-level
+    # race with them. Queue rather than cancel.
+    concurrency:
+      group: scrape-kc-dajd
+      cancel-in-progress: false
 
     steps:
       - name: Checkout
@@ -52,6 +51,51 @@ jobs:
       - name: Run King County DAJD scraper
         run: node scrape.js kcdajd
 
+      - name: Commit data files
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add data/kc_dajd
+          git diff --cached --quiet || git commit -m "chore: update King County DAJD data [skip ci]"
+          # Push races are expected now that the scrape workflows no longer
+          # share one concurrency group: if another workflow pushed first,
+          # pull its commit in and try again, up to 3 retries.
+          for attempt in 0 1 2 3; do
+            if [ "$attempt" -gt 0 ]; then
+              echo "Push rejected -- retry $attempt of 3 after pulling the newer commit"
+              sleep $((attempt * 5))
+            fi
+            git pull --no-rebase -X ours
+            if git push; then exit 0; fi
+          done
+          echo "Push still rejected after 3 retries"
+          exit 1
+
+  # Runs after the scrape job, from a fresh checkout of the latest main, so it
+  # publishes every source's newest committed data -- not just this workflow's.
+  # (A separate workflow triggered on push wouldn't work: pushes made with
+  # GITHUB_TOKEN don't trigger other workflows.)
+  deploy:
+    needs: scrape
+    runs-on: ubuntu-latest
+    # Shared by all four scrape workflows, so two Pages deploys never overlap.
+    # A newer queued deploy replaces a waiting one; that's fine, since every
+    # deploy builds from whatever main is when it starts.
+    concurrency:
+      group: pages-deploy
+      cancel-in-progress: false
+
+    steps:
+      - name: Checkout latest main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
       - name: Copy data to frontend public
         run: |
           mkdir -p frontend/public/data
@@ -62,15 +106,6 @@ jobs:
 
       - name: Build frontend
         run: cd frontend && npm run build
-
-      - name: Commit data files
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add data/kc_dajd
-          git diff --cached --quiet || git commit -m "chore: update King County DAJD data [skip ci]"
-          git pull --no-rebase -X ours
-          git push
 
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v4
