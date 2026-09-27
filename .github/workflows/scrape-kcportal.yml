@@ -23,17 +23,16 @@ on:
 permissions:
   contents: write
 
-# Shared with scrape-kcdajd.yml only -- both write data/kc_dajd, so they
-# must never run at the same time. Other workflows write other files and
-# run in their own groups; the commit step's push retry handles the git-level
-# race with them. Queue rather than cancel.
-concurrency:
-  group: scrape-kc-dajd
-  cancel-in-progress: false
-
 jobs:
-  scrape-and-deploy:
+  scrape:
     runs-on: ubuntu-latest
+    # Shared with scrape-kcdajd.yml only -- both write data/kc_dajd, so they
+    # must never run at the same time. Other workflows write other files and
+    # run in their own groups; the commit step's push retry handles the git-level
+    # race with them. Queue rather than cancel.
+    concurrency:
+      group: scrape-kc-dajd
+      cancel-in-progress: false
     timeout-minutes: 30
 
     steps:
@@ -90,20 +89,6 @@ jobs:
           name: kcportal-dry-run
           path: ${{ runner.temp }}/kcportal-dry-run
 
-      - name: Copy data to frontend public
-        if: ${{ !inputs.dry_run }}
-        run: |
-          mkdir -p frontend/public/data
-          cp -r data/* frontend/public/data/
-
-      - name: Install frontend dependencies
-        if: ${{ !inputs.dry_run }}
-        run: cd frontend && npm install
-
-      - name: Build frontend
-        if: ${{ !inputs.dry_run }}
-        run: cd frontend && npm run build
-
       - name: Commit data files
         if: ${{ !inputs.dry_run }}
         run: |
@@ -125,8 +110,44 @@ jobs:
           echo "Push still rejected after 3 retries"
           exit 1
 
+  # Runs after the scrape job, from a fresh checkout of the latest main, so it
+  # publishes every source's newest committed data -- not just this workflow's.
+  # (A separate workflow triggered on push wouldn't work: pushes made with
+  # GITHUB_TOKEN don't trigger other workflows.)
+  deploy:
+    needs: scrape
+    if: ${{ !inputs.dry_run }}
+    runs-on: ubuntu-latest
+    # Shared by all four scrape workflows, so two Pages deploys never overlap.
+    # A newer queued deploy replaces a waiting one; that's fine, since every
+    # deploy builds from whatever main is when it starts.
+    concurrency:
+      group: pages-deploy
+      cancel-in-progress: false
+
+    steps:
+      - name: Checkout latest main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Copy data to frontend public
+        run: |
+          mkdir -p frontend/public/data
+          cp -r data/* frontend/public/data/
+
+      - name: Install frontend dependencies
+        run: cd frontend && npm install
+
+      - name: Build frontend
+        run: cd frontend && npm run build
+
       - name: Deploy to GitHub Pages
-        if: ${{ !inputs.dry_run }}
         uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}

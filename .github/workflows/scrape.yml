@@ -17,21 +17,20 @@ on:
 permissions:
   contents: write
 
-# GitHub only honors a fraction of scheduled triggers under load -- running
-# every 10 min (instead of 30) is a partial mitigation for that, but it means
-# two runs can now realistically overlap if one takes a while. Queue instead
-# of canceling: a canceled mid-commit run risks a half-written push, while a
-# queued one just runs late. Own group: this is the only workflow writing
-# data/score, data/kent and data/kirkland. (A group holds one pending run and
-# a newer one replaces it -- fine here, the next run covers the same ground,
-# but it's why the daily/2-hourly workflows aren't in this 10-minute group.)
-concurrency:
-  group: scrape-live-sources
-  cancel-in-progress: false
-
 jobs:
-  scrape-and-deploy:
+  scrape:
     runs-on: ubuntu-latest
+    # GitHub only honors a fraction of scheduled triggers under load -- running
+    # every 10 min (instead of 30) is a partial mitigation for that, but it means
+    # two runs can now realistically overlap if one takes a while. Queue instead
+    # of canceling: a canceled mid-commit run risks a half-written push, while a
+    # queued one just runs late. Own group: this is the only workflow writing
+    # data/score, data/kent and data/kirkland. (A group holds one pending run and
+    # a newer one replaces it -- fine here, the next run covers the same ground,
+    # but it's why the daily/2-hourly workflows aren't in this 10-minute group.)
+    concurrency:
+      group: scrape-live-sources
+      cancel-in-progress: false
     env:
       TZ: America/Los_Angeles
 
@@ -66,17 +65,6 @@ jobs:
         env:
           FORCE_UPDATE: ${{ github.event.inputs.force_update }}
 
-      - name: Copy data to frontend public
-        run: |
-          mkdir -p frontend/public/data
-          cp -r data/* frontend/public/data/
-
-      - name: Install frontend dependencies
-        run: cd frontend && npm install
-
-      - name: Build frontend
-        run: cd frontend && npm run build
-
       - name: Commit data files
         run: |
           git config user.name "github-actions[bot]"
@@ -97,12 +85,51 @@ jobs:
           echo "Push still rejected after 3 retries"
           exit 1
 
+      - name: Fail job if any source failed
+        if: steps.scrape.outcome == 'failure'
+        run: exit 1
+
+  # Runs after the scrape job, from a fresh checkout of the latest main, so it
+  # publishes every source's newest committed data -- not just this workflow's.
+  # (A separate workflow triggered on push wouldn't work: pushes made with
+  # GITHUB_TOKEN don't trigger other workflows.)
+  deploy:
+    needs: scrape
+    # Deploys even when a source failed: the scrape job commits the sources
+    # that worked, then marks itself failed in its last step.
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-latest
+    # Shared by all four scrape workflows, so two Pages deploys never overlap.
+    # A newer queued deploy replaces a waiting one; that's fine, since every
+    # deploy builds from whatever main is when it starts.
+    concurrency:
+      group: pages-deploy
+      cancel-in-progress: false
+
+    steps:
+      - name: Checkout latest main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Copy data to frontend public
+        run: |
+          mkdir -p frontend/public/data
+          cp -r data/* frontend/public/data/
+
+      - name: Install frontend dependencies
+        run: cd frontend && npm install
+
+      - name: Build frontend
+        run: cd frontend && npm run build
+
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./frontend/dist
-
-      - name: Fail job if any source failed
-        if: steps.scrape.outcome == 'failure'
-        run: exit 1
