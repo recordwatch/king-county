@@ -38,6 +38,16 @@ jobs:
         with:
           fetch-depth: 0
 
+      # A queued run was triggered (and its commit fixed) before whatever ran
+      # ahead of it in the concurrency group pushed. actions/checkout checks
+      # out that triggering commit, so without this a queued run would diff
+      # against stale data/score|kent|kirkland and its push would overwrite
+      # the newer run's changes.
+      - name: Sync to latest main before scraping
+        run: |
+          git fetch origin main
+          git checkout -B main origin/main
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:

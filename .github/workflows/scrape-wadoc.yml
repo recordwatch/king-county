@@ -23,6 +23,15 @@ jobs:
         with:
           fetch-depth: 0
 
+      # actions/checkout checks out the commit that triggered this run, which
+      # can be behind main by the time the job starts. Sync first so the
+      # cross-reference reads the latest data/kc_dajd (and every other
+      # source's) releases, and the push doesn't carry stale data.
+      - name: Sync to latest main before scraping
+        run: |
+          git fetch origin main
+          git checkout -B main origin/main
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
