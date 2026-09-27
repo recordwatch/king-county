@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react'
+import { Fragment, useState, useEffect, useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import Header from './Header'
 import HBarList from './HBarList'
@@ -66,21 +66,148 @@ function StayLengthTable({ stats }) {
         <thead><tr><th>Source</th><th>n</th><th>Avg</th><th>Median</th></tr></thead>
         <tbody>
           {stats.stayLength.map(row => (
-            <tr key={row.source}>
-              <td>{sourceLabel(row.source)}</td>
-              {row.n === 0 ? (
-                <td colSpan={3}>No published release times</td>
-              ) : (
-                <>
-                  <td>{row.n}</td>
-                  <td>{fmtDays(row.avgDays)}</td>
-                  <td>{fmtDays(row.medianDays)}</td>
-                </>
-              )}
-            </tr>
+            <Fragment key={row.source}>
+              <tr>
+                <td>{sourceLabel(row.source)}{row.split && row.n > 0 ? ' — all releases' : ''}</td>
+                {row.n === 0 ? (
+                  <td colSpan={3}>No published release times</td>
+                ) : (
+                  <>
+                    <td>{row.n}</td>
+                    <td>{fmtDays(row.avgDays)}</td>
+                    <td>{fmtDays(row.medianDays)}</td>
+                  </>
+                )}
+              </tr>
+              {row.split && row.n > 0 && [['excluding transfers', row.split.excludingTransfers], ['transfers only', row.split.transfersOnly]].map(([label, s]) => (
+                <tr key={label} className="stats-subrow">
+                  <td>&nbsp;&nbsp;{label}</td>
+                  <td>{s.n}</td>
+                  <td>{fmtDays(s.avgDays)}</td>
+                  <td>{fmtDays(s.medianDays)}</td>
+                </tr>
+              ))}
+            </Fragment>
           ))}
         </tbody>
       </table>
+      <div className="section-note">
+        A transfer to another agency ends the stay at this jail, but the person stays in custody, so SCORE and King
+        County DAJD are also shown with transfers split out, using each source&apos;s published release reason.
+        {stats.stayLength.filter(r => r.split?.noReason > 0).map(r => (
+          <Fragment key={r.source}>
+            {' '}{r.split.noReason} {sourceLabel(r.source)} release{r.split.noReason !== 1 ? 's have' : ' has'} no
+            published reason yet (confirmed only by the county&apos;s jail lookup), so {r.split.noReason !== 1 ? 'they are' : 'it is'} counted
+            in &quot;all releases&quot; but left out of the two split rows.
+          </Fragment>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function fmtPct(n) {
+  return n === null || n === undefined ? '—' : `${n.toFixed(1)}%`
+}
+
+const RELEASE_REASON_NOTE = {
+  score: "Based on SCORE releases tracked since September 13, 2026. SCORE's site has older release history, but only for people booked since tracking began, so it isn't used here.",
+}
+
+// Published release reasons per source. Each source's own wording is listed
+// under its group; sources are never combined.
+function ReleaseReasonBlock({ sourceId, data }) {
+  if (!data) {
+    return (
+      <div className="agency-block">
+        <div className="agency-name">{sourceLabel(sourceId)}</div>
+        <div className="agency-meta">No published release reason</div>
+      </div>
+    )
+  }
+  return (
+    <div className="agency-block">
+      <div className="agency-name">{sourceLabel(sourceId)}</div>
+      <div className="agency-meta">
+        n = {data.n} releases with a published reason
+        {data.dateRange && <> &nbsp;·&nbsp; released {fmtDate(data.dateRange.min)} – {fmtDate(data.dateRange.max)}</>}
+      </div>
+      {RELEASE_REASON_NOTE[sourceId] && <div className="section-note">{RELEASE_REASON_NOTE[sourceId]}</div>}
+      {data.noReason > 0 && <div className="section-note">{data.noReason} other release{data.noReason !== 1 ? 's have' : ' has'} no published reason and {data.noReason !== 1 ? 'are' : 'is'} not counted.</div>}
+      {data.multi > 0 && <div className="section-note">{data.multi} release{data.multi !== 1 ? 's list' : ' lists'} two reasons and {data.multi !== 1 ? 'are' : 'is'} counted under both, so the percentages add up to slightly more than 100%.</div>}
+      <table className="stats-table">
+        <thead><tr><th>How they left</th><th>n</th><th>%</th></tr></thead>
+        <tbody>
+          {data.groups.map(g => (
+            <Fragment key={g.name}>
+              <tr>
+                <td>{g.name}</td>
+                <td>{g.count}</td>
+                <td>{fmtPct(g.pct)}</td>
+              </tr>
+              {g.reasons.map(r => (
+                <tr key={r.name} className="stats-subrow">
+                  <td>&nbsp;&nbsp;“{r.name}”</td>
+                  <td>{r.count}</td>
+                  <td></td>
+                </tr>
+              ))}
+            </Fragment>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  )
+}
+
+function ReleasedWithBail({ stats }) {
+  return (
+    <div>
+      <div className="section-title">% Released on Bail or Bond</div>
+      <div className="section-note">
+        Uses each source&apos;s published release reason, not whether bail was set — bail being set doesn&apos;t
+        mean the person paid it. SCORE: release type &quot;RELEASED - CASH BAIL OR BOND&quot; from the person&apos;s
+        booking list. King County DAJD: county dataset release reasons &quot;Bail&quot; or &quot;Bond&quot; (release on
+        personal recognizance is not counted as bail). Kent and Kirkland publish no release reason, so no
+        percentage is shown for them.
+      </div>
+      <table className="stats-table">
+        <thead><tr><th>Source</th><th>Method</th><th>Bail/bond</th><th>n</th><th>%</th></tr></thead>
+        <tbody>
+          {SOURCES.map(s => {
+            const d = stats.releaseReasons[s.id]
+            return (
+              <tr key={s.id}>
+                <td>{s.label}</td>
+                {d ? (
+                  <>
+                    <td>Published release reason</td>
+                    <td>{d.bail}</td>
+                    <td>{d.n}</td>
+                    <td>{fmtPct(d.bailPct)}</td>
+                  </>
+                ) : (
+                  <td colSpan={4}>Not available — no published release reason</td>
+                )}
+              </tr>
+            )
+          })}
+        </tbody>
+      </table>
+    </div>
+  )
+}
+
+function ReleaseReasonsSection({ stats }) {
+  return (
+    <div>
+      <div className="section-title">How People Left Custody</div>
+      <div className="section-note">
+        From each source&apos;s own published release reason, per source — never combined. Transfers to another
+        agency are their own group: the person left this jail but not custody. The jails hold different
+        populations, so the sources shouldn&apos;t be compared directly.
+      </div>
+      {SOURCES.map(s => <ReleaseReasonBlock key={s.id} sourceId={s.id} data={stats.releaseReasons[s.id]} />)}
     </div>
   )
 }
@@ -196,9 +323,13 @@ function BailTab({ stats }) {
       <div className="section-note">
         Bail is never combined across sources — Kirkland's booking-detail page publishes one bond total for the
         whole booking (copied onto every charge in our data), so it's counted once per booking here. SCORE and Kent
-        both publish a genuine bail figure per charge, so those are counted per charge. King County DAJD's feed has
-        no bail/bond field at all.
+        both publish a genuine bail figure per charge, so those are counted per charge. King County DAJD&apos;s county
+        dataset has no bail field; bail from the county&apos;s jail lookup is shown on booking cards but isn&apos;t
+        counted in the bail amounts below yet.
       </div>
+      <ReleasedWithBail stats={stats} />
+      <ReleaseReasonsSection stats={stats} />
+      <div className="section-title">Bail Amounts</div>
       {stats.bail.map(row => <BailSourceBlock key={row.source} row={row} />)}
     </div>
   )
@@ -256,7 +387,8 @@ function DetentionTab({ stats }) {
     <div>
       <div className="section-note">
         Detention duration by charge category, per source — never combined across sources (see Stay Length on the
-        Summary tab for why). Only releases with a real, source-published release time are counted. King County
+        Summary tab for why). Only releases with a real, source-published release time are counted. Transfers to
+        another agency are included (see Stay Length on the Summary tab for figures with transfers split out). King County
         DAJD only pulls a rolling 60-day booking window, so stays that began more than 60 days ago are excluded.
       </div>
       {SOURCES.map(s => <DetentionSourceBlock key={s.id} sourceId={s.id} data={stats.detention[s.id]} />)}
