@@ -13,6 +13,13 @@ on:
 permissions:
   contents: write
 
+# Same group as every other scrape workflow -- they all push to the same
+# history, and this one's cross-reference reads data/kc_dajd, which two
+# other workflows write. Queue rather than cancel, as there.
+concurrency:
+  group: scrape-live-sources
+  cancel-in-progress: false
+
 jobs:
   scrape-and-deploy:
     runs-on: ubuntu-latest
