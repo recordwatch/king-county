@@ -15,6 +15,31 @@ function calcTimeHeld(source, start, end) {
   return `${mins}m`
 }
 
+// Sources whose bookingHistory is shown on the card, and how far back each
+// source's own site goes.
+const HISTORY_NOTE = {
+  kc_dajd: "As far back as the county's site shows, usually about the past year",
+  score: "As far back as SCORE's site shows",
+}
+
+// SCORE sometimes lists one booking number on several rows, one per release
+// type, with the same dates (65 such groups on 2026-09-27, none with
+// differing dates). Shown as one row per booking with every release type;
+// the stored data stays as SCORE publishes it.
+function mergeHistoryRows(rows) {
+  const byNumber = new Map()
+  for (const b of rows) {
+    const m = byNumber.get(b.bookingNumber)
+    if (!m) {
+      byNumber.set(b.bookingNumber, { ...b, releaseTypes: b.releaseType ? [b.releaseType] : [] })
+      continue
+    }
+    for (const k of ['dateBooked', 'dateArrested', 'dateReleased']) m[k] = m[k] || b[k]
+    if (b.releaseType && !m.releaseTypes.includes(b.releaseType)) m.releaseTypes.push(b.releaseType)
+  }
+  return [...byNumber.values()]
+}
+
 function ChargeRow({ c }) {
   return (
     <div className="charge-row">
@@ -44,6 +69,7 @@ export default function BookingCard({ entry }) {
   // approximate, so the duration built from them is labeled as such.
   const timeHeld = rawTimeHeld && entry.releaseSource !== 'county' ? `about ${rawTimeHeld}` : rawTimeHeld
   const lagNote = entryLagNote(entry)
+  const history = HISTORY_NOTE[entry.source] && entry.bookingHistory ? mergeHistoryRows(entry.bookingHistory) : []
 
   return (
     <div className={`card ${isReleased ? 'card-released' : 'card-custody'}`}>
@@ -88,6 +114,16 @@ export default function BookingCard({ entry }) {
             </div>
           )}
 
+          {/* Booking-level fields (KC DAJD, from the DAJD portal; Kent's
+              totalBail). SCORE's agency is per charge, shown in ChargeRow. */}
+          {(entry.arrestingAgency || entry.totalBail) && (
+            <div className="card-release-row">
+              {entry.arrestingAgency && <span>Arresting agency: {entry.arrestingAgency}</span>}
+              {entry.arrestingAgency && entry.totalBail && <span> &nbsp;·&nbsp; </span>}
+              {entry.totalBail && <span>Total bail: {entry.totalBail}</span>}
+            </div>
+          )}
+
           {entry.charges && entry.charges.length > 0 ? (
             <div className="card-charges">
               <div className="charges-title">Charges ({entry.charges.length})</div>
@@ -112,6 +148,32 @@ export default function BookingCard({ entry }) {
                     {b.releasedDate && <span> &nbsp;·&nbsp; Released: {b.releasedDate}</span>}
                   </div>
                   {b.charges.map((c, j) => <ChargeRow key={j} c={c} />)}
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* SCORE's and KC DAJD's bookingHistory. KC's always lists the
+              current booking; SCORE's usually doesn't until the person is
+              released, so the heading checks. KC's rows carry an arrest time
+              and booking status; SCORE's a booked time and release type. */}
+          {history.length > 0 && (
+            <div className="card-history">
+              <div className="charges-title">
+                Booking History ({history.length}{history.some(b => b.bookingNumber === entry.bookingNumber) ? ', including this one' : ' prior'})
+              </div>
+              <div className="card-history-note">{HISTORY_NOTE[entry.source]}</div>
+              {history.map((b, i) => (
+                <div key={i} className="prior-booking">
+                  <div className="prior-booking-header">
+                    Booking #{b.bookingNumber}
+                    {b.dateBooked && <span> &nbsp;·&nbsp; Booked: {b.dateBooked}</span>}
+                    {b.dateArrested && <span> &nbsp;·&nbsp; Arrested: {displayEntryDate(entry.source, b.dateArrested)}</span>}
+                    {b.dateReleased
+                      ? <span> &nbsp;·&nbsp; Released: {displayEntryDate(entry.source, b.dateReleased)}</span>
+                      : b.bookingStatus === 'Booked' && <span> &nbsp;·&nbsp; Still booked</span>}
+                    {b.releaseTypes.length > 0 && <span> &nbsp;·&nbsp; {b.releaseTypes.join(' / ')}</span>}
+                  </div>
                 </div>
               ))}
             </div>

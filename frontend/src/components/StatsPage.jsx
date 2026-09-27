@@ -207,7 +207,7 @@ function BailTab({ stats }) {
 function AgenciesTab({ stats }) {
   return (
     <div>
-      <div className="section-note">Only SCORE publishes an arresting agency on its charges — Kent, Kirkland, and King County DAJD don't expose this field, so they aren't represented below.</div>
+      <div className="section-note">SCORE publishes an arresting agency on each charge, and King County DAJD publishes one per booking (shown on its booking cards). Only SCORE's per-charge agencies are counted below. Kent and Kirkland don't expose this field.</div>
       <HBarList items={stats.agencies.map(a => ({ name: a.agency, count: a.chargeCount }))} />
       {stats.agencies.map(a => (
         <div className="agency-block" key={a.agency}>
