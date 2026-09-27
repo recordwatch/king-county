@@ -248,8 +248,9 @@ export function computeStats(log) {
   // --- Bail (per source only -- never combined, see file header) ---
   const bail = sourceIds.map(id => ({ source: id, ...bailStatsFor(bySource[id], BAIL_UNIT[id]) }))
 
-  // --- Agencies (SCORE only -- the only source that publishes an arresting
-  // agency; see scrapers/score.js) ---
+  // --- Agencies (SCORE only -- the only source with an arresting agency per
+  // charge, see scrapers/score.js. KC DAJD's is per booking, not counted
+  // here) ---
   const agencyCharges = {}
   for (const e of bySource.score || []) {
     for (const c of e.charges || []) {

@@ -215,6 +215,7 @@ body {
 }
 
 .card-history { margin-top: 0.5rem; }
+.card-history-note { font-size: 0.6rem; color: #8B9298; font-style: italic; margin-bottom: 0.5rem; }
 .prior-booking {
   background: #181C20;
   border: 1px solid #2A2E32;
