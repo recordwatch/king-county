@@ -1,12 +1,14 @@
 name: Scrape & Deploy (Live Sources)
 
 # SCORE, Kent, and Kirkland all run true live "who's in custody right now"
-# rosters — polled every 30 min like every sibling county monitor. King
-# County DAJD is a separate, slower-cadence workflow (see scrape-kcdajd.yml)
-# since its Open Data feed only refreshes every few days.
+# rosters. King County DAJD is a separate, slower-cadence workflow (see
+# scrape-kcdajd.yml) since its Open Data feed only refreshes every few days.
+#
+# No `schedule:` trigger: GitHub ran only a fraction of the scheduled runs.
+# cron-job.org starts this workflow through the GitHub API (workflow_dispatch)
+# every 30 minutes instead. Its trigger token expires 2026-12-27 and must be
+# replaced in cron-job.org before then (see CLAUDE.md).
 on:
-  schedule:
-    - cron: '*/10 * * * *'
   workflow_dispatch:
     inputs:
       force_update:
@@ -20,14 +22,13 @@ permissions:
 jobs:
   scrape:
     runs-on: ubuntu-latest
-    # GitHub only honors a fraction of scheduled triggers under load -- running
-    # every 10 min (instead of 30) is a partial mitigation for that, but it means
-    # two runs can now realistically overlap if one takes a while. Queue instead
-    # of canceling: a canceled mid-commit run risks a half-written push, while a
-    # queued one just runs late. Own group: this is the only workflow writing
-    # data/score, data/kent and data/kirkland. (A group holds one pending run and
-    # a newer one replaces it -- fine here, the next run covers the same ground,
-    # but it's why the daily/2-hourly workflows aren't in this 10-minute group.)
+    # A run can still overlap the next one if it takes a while (or if someone
+    # starts one by hand). Queue instead of canceling: a canceled mid-commit
+    # run risks a half-written push, while a queued one just runs late. Own
+    # group: this is the only workflow writing data/score, data/kent and
+    # data/kirkland. (A group holds one pending run and a newer one replaces
+    # it -- fine here, the next run covers the same ground, but it's why the
+    # daily/2-hourly workflows aren't in this group.)
     concurrency:
       group: scrape-live-sources
       cancel-in-progress: false

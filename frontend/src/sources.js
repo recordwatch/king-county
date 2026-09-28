@@ -4,11 +4,11 @@
 // Kept in one place since App.jsx, StatBar, and the source filter all need
 // the same id/label/cadence info.
 export const SOURCES = [
-  // scrape.yml's cron is */10, but GitHub drops/delays scheduled runs under
-  // load, so the real gap between runs is often longer.
-  { id: 'score', label: 'SCORE', cadence: 'Live · runs scheduled every 10 min, actual timing varies' },
-  { id: 'kent', label: 'Kent', cadence: 'Live · runs scheduled every 10 min, actual timing varies' },
-  { id: 'kirkland', label: 'Kirkland', cadence: 'Live · runs scheduled every 10 min, actual timing varies' },
+  // scrape.yml is started every 30 minutes by an external scheduler
+  // (cron-job.org), not GitHub's own cron -- see CLAUDE.md.
+  { id: 'score', label: 'SCORE', cadence: 'Live · checked every 30 min' },
+  { id: 'kent', label: 'Kent', cadence: 'Live · checked every 30 min' },
+  { id: 'kirkland', label: 'Kirkland', cadence: 'Live · checked every 30 min' },
   { id: 'kc_dajd', label: 'King County DAJD', cadence: 'Periodic · the county republishes this dataset every 1–2 weeks, not live',
     // Per record: only on in-custody bookings the DAJD portal hasn't checked
     // yet (entry.statusSource !== 'portal') -- "in custody" there still comes
