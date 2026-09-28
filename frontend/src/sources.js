@@ -24,10 +24,13 @@ export function sourceLabel(id) {
   return SOURCES.find(s => s.id === id)?.label || id
 }
 
-// The note for one record: only in-custody records the DAJD portal hasn't
-// checked; null for released records and portal-checked ones.
+// The note for one record: in-custody records the DAJD portal hasn't
+// checked, plus any in-custody record the portal's last full check didn't
+// list (portalMissing), since its portal status may be out of date. Null for
+// released records and portal-checked ones the portal still lists.
 export function entryLagNote(entry) {
-  if (entry.status !== 'in_custody' || entry.statusSource === 'portal') return null
+  if (entry.status !== 'in_custody') return null
+  if (entry.statusSource === 'portal' && !entry.portalMissing) return null
   return SOURCES.find(s => s.id === entry.source)?.lagNote || null
 }
 
