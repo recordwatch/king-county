@@ -45,8 +45,25 @@ function parsePanels($, scope) {
   return out;
 }
 
+// A single roster GET timing out (confirmed 2026-09-28 04:00 UTC, "timeout of
+// 30000ms exceeded", recovered by the next run) shouldn't cost a whole run,
+// so a failed request is retried once after a short pause. Only the request
+// itself is retried: an "Updating Information" response is a successful
+// request and still skips the run below, since the rebuild lasts minutes.
+const ROSTER_RETRY_DELAY_MS = 12000;
+
+async function getRosterPage() {
+  try {
+    return await axios.get(ROSTER_URL, { headers: HEADERS, timeout: 30000 });
+  } catch (err) {
+    console.log(`  SCORE roster request failed (${err.message}) -- retrying once in ${ROSTER_RETRY_DELAY_MS / 1000}s`);
+    await new Promise(resolve => setTimeout(resolve, ROSTER_RETRY_DELAY_MS));
+    return axios.get(ROSTER_URL, { headers: HEADERS, timeout: 30000 });
+  }
+}
+
 export async function scrapeRoster() {
-  const res = await axios.get(ROSTER_URL, { headers: HEADERS, timeout: 30000 });
+  const res = await getRosterPage();
   if (isUpdatingPlaceholder(res.data)) {
     const err = new Error('SCORE is mid-rebuild ("Updating Information") -- skipping this run.');
     err.expectedEmpty = true;

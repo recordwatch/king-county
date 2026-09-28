@@ -1,0 +1,1480 @@
+{
+  "takenAt": "2026-09-28T08:20:04.768Z",
+  "fromCommit": "69969e2a7ecfeda650c833d50f852f53aeea49d8",
+  "purpose": "Before-snapshot for CLAUDE.md pending item 1. After the next scrape-kcdajd.yml run that changes data/kc_dajd, diff these records against the live files. ucn and portalSubjectId are left out on purpose (roster.json-only ids the site does not show).",
+  "records": {
+    "2026-013178": {
+      "why": "portal-only canary TONIA (must stay one record, portal status kept)",
+      "rosterMatches": 1,
+      "changeLogMatches": 1,
+      "roster": {
+        "idnum": "2026-013178",
+        "source": "kc_dajd",
+        "facility": "King County Correctional Facility",
+        "bookingNumber": "2026-013178",
+        "name": "TONIA, SOOTAGA",
+        "status": "in_custody",
+        "firstSeen": "09/26/2026, 19:14:40",
+        "releasedAt": null,
+        "releaseReason": null,
+        "releaseSource": null,
+        "releaseReversals": [],
+        "scheduledReleaseDate": null,
+        "detailId": null,
+        "bookingDate": "2026-09-17T22:03:22.000",
+        "releaseType": null,
+        "charges": [
+          {
+            "charge": "Unlawful use of weapons - Carry concealed or unconcealed on person",
+            "offenseCode": "12a.14.080(B)",
+            "bail": "$1,000.00",
+            "chargeStatus": "Charged Awaiting Trial",
+            "releaseCode": null,
+            "courtCase": "4260004607"
+          },
+          {
+            "charge": "VUCSA - Possession of Controlled Substance that is either Heroin or Narcotics from Schedule I or II",
+            "offenseCode": "69.50.4013",
+            "bail": "$1,000.00",
+            "chargeStatus": "Charged Awaiting Trial",
+            "releaseCode": "Case Dismissed",
+            "courtCase": "4260004607"
+          },
+          {
+            "charge": "Criminal Trespass 1",
+            "offenseCode": "9A.52.070",
+            "bail": "$1,000.00",
+            "chargeStatus": "Charged Awaiting Trial",
+            "releaseCode": "Court Release - Court Action",
+            "courtCase": "525033219"
+          },
+          {
+            "charge": "Theft 3",
+            "offenseCode": "9A.56.050",
+            "bail": null,
+            "chargeStatus": "Charged Awaiting Trial",
+            "releaseCode": "Court Release - Court Action",
+            "courtCase": "525033219"
+          }
+        ],
+        "priorBookings": null,
+        "totalBail": "$1,000.00",
+        "bookingHistory": [
+          {
+            "bookingNumber": "2026-013178",
+            "dateArrested": "2026-09-17T19:17:00.000",
+            "dateReleased": null,
+            "bookingStatus": "Booked"
+          },
+          {
+            "bookingNumber": "2025-016289",
+            "dateArrested": "2025-11-11T07:47:00.000",
+            "dateReleased": "2025-11-26T01:29:41.000",
+            "bookingStatus": "Released"
+          },
+          {
+            "bookingNumber": "2025-015901",
+            "dateArrested": "2025-11-04T00:31:00.000",
+            "dateReleased": "2025-11-05T01:33:55.000",
+            "bookingStatus": "Released"
+          }
+        ],
+        "detectedReleasedAt": null,
+        "hasDetail": true,
+        "arrestingAgency": "Seattle Police",
+        "statusSource": "portal",
+        "portalCheckedAt": "2026-09-27T23:06:47.206",
+        "portalCharges": [
+          {
+            "charge": "Unlawful use of weapons - Carry concealed or unconcealed on person",
+            "offenseCode": "12a.14.080(B)",
+            "bail": "$1,000.00",
+            "chargeStatus": "Charged Awaiting Trial",
+            "releaseCode": null,
+            "courtCase": "4260004607"
+          },
+          {
+            "charge": "VUCSA - Possession of Controlled Substance that is either Heroin or Narcotics from Schedule I or II",
+            "offenseCode": "69.50.4013",
+            "bail": "$1,000.00",
+            "chargeStatus": "Charged Awaiting Trial",
+            "releaseCode": "Case Dismissed",
+            "courtCase": "4260004607"
+          },
+          {
+            "charge": "Criminal Trespass 1",
+            "offenseCode": "9A.52.070",
+            "bail": "$1,000.00",
+            "chargeStatus": "Charged Awaiting Trial",
+            "releaseCode": "Court Release - Court Action",
+            "courtCase": "525033219"
+          },
+          {
+            "charge": "Theft 3",
+            "offenseCode": "9A.56.050",
+            "bail": null,
+            "chargeStatus": "Charged Awaiting Trial",
+            "releaseCode": "Court Release - Court Action",
+            "courtCase": "525033219"
+          }
+        ],
+        "socrataCharges": [],
+        "unmatchedSocrataCharges": [],
+        "portalDetailAt": "2026-09-28T05:00:51.198"
+      },
+      "changeLog": [
+        {
+          "idnum": "2026-013178",
+          "source": "kc_dajd",
+          "facility": "King County Correctional Facility",
+          "bookingNumber": "2026-013178",
+          "name": "TONIA, SOOTAGA",
+          "status": "in_custody",
+          "firstSeen": "09/26/2026, 19:14:40",
+          "releasedAt": null,
+          "releaseReason": null,
+          "releaseSource": null,
+          "releaseReversals": [],
+          "scheduledReleaseDate": null,
+          "detailId": null,
+          "bookingDate": "2026-09-17T22:03:22.000",
+          "releaseType": null,
+          "charges": [
+            {
+              "charge": "Unlawful use of weapons - Carry concealed or unconcealed on person",
+              "offenseCode": "12a.14.080(B)",
+              "bail": "$1,000.00",
+              "chargeStatus": "Charged Awaiting Trial",
+              "releaseCode": null,
+              "courtCase": "4260004607"
+            },
+            {
+              "charge": "VUCSA - Possession of Controlled Substance that is either Heroin or Narcotics from Schedule I or II",
+              "offenseCode": "69.50.4013",
+              "bail": "$1,000.00",
+              "chargeStatus": "Charged Awaiting Trial",
+              "releaseCode": "Case Dismissed",
+              "courtCase": "4260004607"
+            },
+            {
+              "charge": "Criminal Trespass 1",
+              "offenseCode": "9A.52.070",
+              "bail": "$1,000.00",
+              "chargeStatus": "Charged Awaiting Trial",
+              "releaseCode": "Court Release - Court Action",
+              "courtCase": "525033219"
+            },
+            {
+              "charge": "Theft 3",
+              "offenseCode": "9A.56.050",
+              "bail": null,
+              "chargeStatus": "Charged Awaiting Trial",
+              "releaseCode": "Court Release - Court Action",
+              "courtCase": "525033219"
+            }
+          ],
+          "priorBookings": null,
+          "totalBail": "$1,000.00",
+          "bookingHistory": [
+            {
+              "bookingNumber": "2026-013178",
+              "dateArrested": "2026-09-17T19:17:00.000",
+              "dateReleased": null,
+              "bookingStatus": "Booked"
+            },
+            {
+              "bookingNumber": "2025-016289",
+              "dateArrested": "2025-11-11T07:47:00.000",
+              "dateReleased": "2025-11-26T01:29:41.000",
+              "bookingStatus": "Released"
+            },
+            {
+              "bookingNumber": "2025-015901",
+              "dateArrested": "2025-11-04T00:31:00.000",
+              "dateReleased": "2025-11-05T01:33:55.000",
+              "bookingStatus": "Released"
+            }
+          ],
+          "detectedReleasedAt": null,
+          "hasDetail": true,
+          "arrestingAgency": "Seattle Police",
+          "statusSource": "portal",
+          "portalCheckedAt": "2026-09-27T23:06:47.206",
+          "unmatchedSocrataCharges": []
+        }
+      ]
+    },
+    "2026-012367": {
+      "why": "portal release PATTERSON",
+      "rosterMatches": 1,
+      "changeLogMatches": 1,
+      "roster": {
+        "idnum": "2026-012367",
+        "source": "kc_dajd",
+        "facility": "King County Correctional Facility",
+        "bookingNumber": "2026-012367",
+        "name": "PATTERSON, ZJON' TEYIA TAJANA",
+        "status": "released",
+        "firstSeen": "09/13/2026, 13:06:36",
+        "releasedAt": "2026-09-03T02:39:51.000",
+        "bookingDate": "2026-08-31T20:17:19.000",
+        "charges": [
+          {
+            "charge": "Assault - Investigation",
+            "offenseCode": "1399",
+            "bail": "$30,000.00",
+            "chargeStatus": "Investigation",
+            "releaseCode": "Court Release - Court Action",
+            "courtCase": "Docket TBD",
+            "court": "King County District Court - Kent Division",
+            "causeNumber": "Docket TBD",
+            "rcw": "1399"
+          }
+        ],
+        "hasDetail": true,
+        "scheduledReleaseDate": null,
+        "releaseSource": "county",
+        "releaseType": null,
+        "socrataCharges": [
+          {
+            "charge": "Assault - Investigation",
+            "court": "King County District Court - Kent Division",
+            "causeNumber": "Docket TBD",
+            "rcw": "1399"
+          }
+        ],
+        "portalCharges": [
+          {
+            "charge": "Assault - Investigation",
+            "offenseCode": "1399",
+            "bail": "$30,000.00",
+            "chargeStatus": "Investigation",
+            "releaseCode": "Court Release - Court Action",
+            "courtCase": "Docket TBD"
+          }
+        ],
+        "unmatchedSocrataCharges": [],
+        "portalDetailAt": "2026-09-27T02:14:40.699",
+        "statusSource": "portal",
+        "portalCheckedAt": "2026-09-27T02:14:40.699"
+      },
+      "changeLog": [
+        {
+          "idnum": "2026-012367",
+          "source": "kc_dajd",
+          "facility": "King County Correctional Facility",
+          "bookingNumber": "2026-012367",
+          "name": "PATTERSON, ZJON' TEYIA TAJANA",
+          "status": "released",
+          "firstSeen": "09/13/2026, 13:06:36",
+          "releasedAt": "2026-09-03T02:39:51.000",
+          "bookingDate": "2026-08-31T20:17:19.000",
+          "charges": [
+            {
+              "charge": "Assault - Investigation",
+              "offenseCode": "1399",
+              "bail": "$30,000.00",
+              "chargeStatus": "Investigation",
+              "releaseCode": "Court Release - Court Action",
+              "courtCase": "Docket TBD",
+              "court": "King County District Court - Kent Division",
+              "causeNumber": "Docket TBD",
+              "rcw": "1399"
+            }
+          ],
+          "hasDetail": true,
+          "scheduledReleaseDate": null,
+          "releaseSource": "county",
+          "releaseType": null,
+          "unmatchedSocrataCharges": [],
+          "statusSource": "portal",
+          "portalCheckedAt": "2026-09-27T02:14:40.699"
+        }
+      ]
+    },
+    "2026-012356": {
+      "why": "portal release HUBER",
+      "rosterMatches": 1,
+      "changeLogMatches": 1,
+      "roster": {
+        "idnum": "2026-012356",
+        "source": "kc_dajd",
+        "facility": "Maleng Regional Justice Center",
+        "bookingNumber": "2026-012356",
+        "name": "HUBER, JULIE CHRISTINE",
+        "status": "released",
+        "firstSeen": "09/13/2026, 13:06:36",
+        "releasedAt": "2026-09-03T02:23:25.000",
+        "bookingDate": "2026-08-31T18:45:13.000",
+        "charges": [
+          {
+            "charge": "Probation Violation",
+            "offenseCode": "9.95.220",
+            "bail": null,
+            "chargeStatus": "Probation Detainer",
+            "releaseCode": "Court Release - Court Action",
+            "courtCase": "951010438",
+            "court": "KING COUNTY SUPERIOR COURT - Seattle",
+            "causeNumber": "951010438",
+            "rcw": "9.95.220"
+          }
+        ],
+        "hasDetail": true,
+        "scheduledReleaseDate": null,
+        "releaseSource": "county",
+        "releaseType": null,
+        "socrataCharges": [
+          {
+            "charge": "Probation Violation",
+            "court": "KING COUNTY SUPERIOR COURT - Seattle",
+            "causeNumber": "951010438",
+            "rcw": "9.95.220"
+          }
+        ],
+        "portalCharges": [
+          {
+            "charge": "Probation Violation",
+            "offenseCode": "9.95.220",
+            "bail": null,
+            "chargeStatus": "Probation Detainer",
+            "releaseCode": "Court Release - Court Action",
+            "courtCase": "951010438"
+          }
+        ],
+        "unmatchedSocrataCharges": [],
+        "portalDetailAt": "2026-09-27T02:14:40.699",
+        "statusSource": "portal",
+        "portalCheckedAt": "2026-09-27T02:14:40.699"
+      },
+      "changeLog": [
+        {
+          "idnum": "2026-012356",
+          "source": "kc_dajd",
+          "facility": "Maleng Regional Justice Center",
+          "bookingNumber": "2026-012356",
+          "name": "HUBER, JULIE CHRISTINE",
+          "status": "released",
+          "firstSeen": "09/13/2026, 13:06:36",
+          "releasedAt": "2026-09-03T02:23:25.000",
+          "bookingDate": "2026-08-31T18:45:13.000",
+          "charges": [
+            {
+              "charge": "Probation Violation",
+              "offenseCode": "9.95.220",
+              "bail": null,
+              "chargeStatus": "Probation Detainer",
+              "releaseCode": "Court Release - Court Action",
+              "courtCase": "951010438",
+              "court": "KING COUNTY SUPERIOR COURT - Seattle",
+              "causeNumber": "951010438",
+              "rcw": "9.95.220"
+            }
+          ],
+          "hasDetail": true,
+          "scheduledReleaseDate": null,
+          "releaseSource": "county",
+          "releaseType": null,
+          "unmatchedSocrataCharges": [],
+          "statusSource": "portal",
+          "portalCheckedAt": "2026-09-27T02:14:40.699"
+        }
+      ]
+    },
+    "2026-012361": {
+      "why": "portal release JOLICOUER",
+      "rosterMatches": 1,
+      "changeLogMatches": 1,
+      "roster": {
+        "idnum": "2026-012361",
+        "source": "kc_dajd",
+        "facility": "King County Correctional Facility",
+        "bookingNumber": "2026-012361",
+        "name": "JOLICOUER, CODY ALLEN",
+        "status": "released",
+        "firstSeen": "09/13/2026, 13:06:36",
+        "releasedAt": "2026-09-08T14:47:27.000",
+        "bookingDate": "2026-08-31T19:27:52.000",
+        "charges": [
+          {
+            "charge": "Reckless driving",
+            "offenseCode": "46.61.500",
+            "bail": null,
+            "chargeStatus": "Serving Jail Sentence",
+            "releaseCode": "Sentence Expired",
+            "courtCase": "C00866831",
+            "court": "King County District Court - Kent Division",
+            "causeNumber": "C00866831",
+            "rcw": "46.61.500"
+          }
+        ],
+        "hasDetail": true,
+        "scheduledReleaseDate": null,
+        "releaseSource": "county",
+        "releaseType": null,
+        "socrataCharges": [
+          {
+            "charge": "Reckless driving",
+            "court": "King County District Court - Kent Division",
+            "causeNumber": "C00866831",
+            "rcw": "46.61.500"
+          }
+        ],
+        "portalCharges": [
+          {
+            "charge": "Reckless driving",
+            "offenseCode": "46.61.500",
+            "bail": null,
+            "chargeStatus": "Serving Jail Sentence",
+            "releaseCode": "Sentence Expired",
+            "courtCase": "C00866831"
+          }
+        ],
+        "unmatchedSocrataCharges": [],
+        "portalDetailAt": "2026-09-27T02:14:40.699",
+        "statusSource": "portal",
+        "portalCheckedAt": "2026-09-27T02:14:40.699"
+      },
+      "changeLog": [
+        {
+          "idnum": "2026-012361",
+          "source": "kc_dajd",
+          "facility": "King County Correctional Facility",
+          "bookingNumber": "2026-012361",
+          "name": "JOLICOUER, CODY ALLEN",
+          "status": "released",
+          "firstSeen": "09/13/2026, 13:06:36",
+          "releasedAt": "2026-09-08T14:47:27.000",
+          "bookingDate": "2026-08-31T19:27:52.000",
+          "charges": [
+            {
+              "charge": "Reckless driving",
+              "offenseCode": "46.61.500",
+              "bail": null,
+              "chargeStatus": "Serving Jail Sentence",
+              "releaseCode": "Sentence Expired",
+              "courtCase": "C00866831",
+              "court": "King County District Court - Kent Division",
+              "causeNumber": "C00866831",
+              "rcw": "46.61.500"
+            }
+          ],
+          "hasDetail": true,
+          "scheduledReleaseDate": null,
+          "releaseSource": "county",
+          "releaseType": null,
+          "unmatchedSocrataCharges": [],
+          "statusSource": "portal",
+          "portalCheckedAt": "2026-09-27T02:14:40.699"
+        }
+      ]
+    },
+    "2026-010054": {
+      "why": "portal release WOODRUFF: most charges (12 portal, 12 Socrata, all matched)",
+      "rosterMatches": 1,
+      "changeLogMatches": 1,
+      "roster": {
+        "idnum": "2026-010054",
+        "source": "kc_dajd",
+        "facility": "King County Correctional Facility",
+        "bookingNumber": "2026-010054",
+        "name": "WOODRUFF, JAYDON ROSE",
+        "status": "released",
+        "firstSeen": "09/13/2026, 13:06:36",
+        "releasedAt": "2026-09-03T20:15:12.000",
+        "bookingDate": "2026-07-19T01:17:15.000",
+        "charges": [
+          {
+            "charge": "Assault - Investigation",
+            "offenseCode": "1399",
+            "bail": null,
+            "chargeStatus": null,
+            "releaseCode": "Booked or Released in Error",
+            "courtCase": "Docket TBD",
+            "court": "King County District Court Seattle Division",
+            "causeNumber": "Docket TBD",
+            "rcw": "1399"
+          },
+          {
+            "charge": "Robbery 2",
+            "offenseCode": "9A.56.210",
+            "bail": "$10,000.00",
+            "chargeStatus": "Charged Awaiting Trial",
+            "releaseCode": "Court Release - Court Action",
+            "courtCase": "261004494",
+            "court": "King County Superior Court - KCCH",
+            "causeNumber": "261004494",
+            "rcw": "9A.56.210"
+          },
+          {
+            "charge": "Assault 3",
+            "offenseCode": "9A.36.031",
+            "bail": null,
+            "chargeStatus": "Charged Awaiting Trial",
+            "releaseCode": "Court Release - Court Action",
+            "courtCase": "261004494",
+            "court": "King County Superior Court - KCCH",
+            "causeNumber": "261004494",
+            "rcw": "9A.36.031"
+          },
+          {
+            "charge": "Theft",
+            "offenseCode": "12A.08.060",
+            "bail": "$250.00",
+            "chargeStatus": "Charged Awaiting Trial",
+            "releaseCode": "Court Release - Court Action",
+            "courtCase": "4260002688",
+            "court": "Seattle Municipal Court",
+            "causeNumber": "4260002688",
+            "rcw": "12A.08.060"
+          },
+          {
+            "charge": "Resisting Arrest",
+            "offenseCode": "12A.16.050",
+            "bail": "$500.00",
+            "chargeStatus": "Charged Awaiting Trial",
+            "releaseCode": "Court Release - Court Action",
+            "courtCase": "4260002688",
+            "court": "Seattle Municipal Court",
+            "causeNumber": "4260002688",
+            "rcw": "12A.16.050"
+          },
+          {
+            "charge": "Theft",
+            "offenseCode": "12A.08.060",
+            "bail": "$250.00",
+            "chargeStatus": "Charged Awaiting Trial",
+            "releaseCode": "Court Release - Court Action",
+            "courtCase": "4260002731",
+            "court": "Seattle Municipal Court",
+            "causeNumber": "4260002731",
+            "rcw": "12A.08.060"
+          },
+          {
+            "charge": "Obstructing a public officer",
+            "offenseCode": "12A.16.010",
+            "bail": null,
+            "chargeStatus": "Charged Awaiting Trial",
+            "releaseCode": "Court Release - Court Action",
+            "courtCase": "4260002731",
+            "court": "Seattle Municipal Court",
+            "causeNumber": "4260002731",
+            "rcw": "12A.16.010"
+          },
+          {
+            "charge": "Pedestrian Interference",
+            "offenseCode": "12A.12.015",
+            "bail": null,
+            "chargeStatus": "Charged Awaiting Trial",
+            "releaseCode": "Court Release - Court Action",
+            "courtCase": "4260002731",
+            "court": "Seattle Municipal Court",
+            "causeNumber": "4260002731",
+            "rcw": "12A.12.015"
+          },
+          {
+            "charge": "Robbery - Investigation",
+            "offenseCode": "1299",
+            "bail": "$10,000.00",
+            "chargeStatus": "Investigation",
+            "releaseCode": "Investigated and Charged",
+            "courtCase": "Docket TBD",
+            "court": "King County District Court Seattle Division",
+            "causeNumber": "Docket TBD",
+            "rcw": "1299"
+          },
+          {
+            "charge": "Assault - Investigation",
+            "offenseCode": "1399",
+            "bail": null,
+            "chargeStatus": "Investigation",
+            "releaseCode": "Investigated and Charged",
+            "courtCase": "Docket TBD",
+            "court": "King County District Court Seattle Division",
+            "causeNumber": "Docket TBD",
+            "rcw": "1399"
+          },
+          {
+            "charge": "Assault - Investigation",
+            "offenseCode": "1399",
+            "bail": null,
+            "chargeStatus": "Investigation",
+            "releaseCode": "Investigated and Charged",
+            "courtCase": "Docket TBD",
+            "court": "King County District Court Seattle Division",
+            "causeNumber": "Docket TBD",
+            "rcw": "1399"
+          },
+          {
+            "charge": "Assault - Investigation",
+            "offenseCode": "1399",
+            "bail": null,
+            "chargeStatus": "Investigation",
+            "releaseCode": "Investigated and Charged",
+            "courtCase": "Docket TBD",
+            "court": "King County Superior Court - KCCH",
+            "causeNumber": "Docket TBD",
+            "rcw": "1399"
+          }
+        ],
+        "hasDetail": true,
+        "scheduledReleaseDate": null,
+        "releaseSource": "county",
+        "releaseType": null,
+        "socrataCharges": [
+          {
+            "charge": "Theft",
+            "court": "Seattle Municipal Court",
+            "causeNumber": "4260002688",
+            "rcw": "12A.08.060"
+          },
+          {
+            "charge": "Assault - Investigation",
+            "court": "King County District Court Seattle Division",
+            "causeNumber": "Docket TBD",
+            "rcw": "1399"
+          },
+          {
+            "charge": "Theft",
+            "court": "Seattle Municipal Court",
+            "causeNumber": "4260002731",
+            "rcw": "12A.08.060"
+          },
+          {
+            "charge": "Obstructing a public officer",
+            "court": "Seattle Municipal Court",
+            "causeNumber": "4260002731",
+            "rcw": "12A.16.010"
+          },
+          {
+            "charge": "Pedestrian Interference",
+            "court": "Seattle Municipal Court",
+            "causeNumber": "4260002731",
+            "rcw": "12A.12.015"
+          },
+          {
+            "charge": "Robbery - Investigation",
+            "court": "King County District Court Seattle Division",
+            "causeNumber": "Docket TBD",
+            "rcw": "1299"
+          },
+          {
+            "charge": "Assault - Investigation",
+            "court": "King County District Court Seattle Division",
+            "causeNumber": "Docket TBD",
+            "rcw": "1399"
+          },
+          {
+            "charge": "Resisting Arrest",
+            "court": "Seattle Municipal Court",
+            "causeNumber": "4260002688",
+            "rcw": "12A.16.050"
+          },
+          {
+            "charge": "Assault - Investigation",
+            "court": "King County District Court Seattle Division",
+            "causeNumber": "Docket TBD",
+            "rcw": "1399"
+          },
+          {
+            "charge": "Robbery 2",
+            "court": "King County Superior Court - KCCH",
+            "causeNumber": "261004494",
+            "rcw": "9A.56.210"
+          },
+          {
+            "charge": "Assault 3",
+            "court": "King County Superior Court - KCCH",
+            "causeNumber": "261004494",
+            "rcw": "9A.36.031"
+          },
+          {
+            "charge": "Assault - Investigation",
+            "court": "King County Superior Court - KCCH",
+            "causeNumber": "Docket TBD",
+            "rcw": "1399"
+          }
+        ],
+        "portalCharges": [
+          {
+            "charge": "Assault - Investigation",
+            "offenseCode": "1399",
+            "bail": null,
+            "chargeStatus": null,
+            "releaseCode": "Booked or Released in Error",
+            "courtCase": "Docket TBD"
+          },
+          {
+            "charge": "Robbery 2",
+            "offenseCode": "9A.56.210",
+            "bail": "$10,000.00",
+            "chargeStatus": "Charged Awaiting Trial",
+            "releaseCode": "Court Release - Court Action",
+            "courtCase": "261004494"
+          },
+          {
+            "charge": "Assault 3",
+            "offenseCode": "9A.36.031",
+            "bail": null,
+            "chargeStatus": "Charged Awaiting Trial",
+            "releaseCode": "Court Release - Court Action",
+            "courtCase": "261004494"
+          },
+          {
+            "charge": "Theft",
+            "offenseCode": "12A.08.060",
+            "bail": "$250.00",
+            "chargeStatus": "Charged Awaiting Trial",
+            "releaseCode": "Court Release - Court Action",
+            "courtCase": "4260002688"
+          },
+          {
+            "charge": "Resisting Arrest",
+            "offenseCode": "12A.16.050",
+            "bail": "$500.00",
+            "chargeStatus": "Charged Awaiting Trial",
+            "releaseCode": "Court Release - Court Action",
+            "courtCase": "4260002688"
+          },
+          {
+            "charge": "Theft",
+            "offenseCode": "12A.08.060",
+            "bail": "$250.00",
+            "chargeStatus": "Charged Awaiting Trial",
+            "releaseCode": "Court Release - Court Action",
+            "courtCase": "4260002731"
+          },
+          {
+            "charge": "Obstructing a public officer",
+            "offenseCode": "12A.16.010",
+            "bail": null,
+            "chargeStatus": "Charged Awaiting Trial",
+            "releaseCode": "Court Release - Court Action",
+            "courtCase": "4260002731"
+          },
+          {
+            "charge": "Pedestrian Interference",
+            "offenseCode": "12A.12.015",
+            "bail": null,
+            "chargeStatus": "Charged Awaiting Trial",
+            "releaseCode": "Court Release - Court Action",
+            "courtCase": "4260002731"
+          },
+          {
+            "charge": "Robbery - Investigation",
+            "offenseCode": "1299",
+            "bail": "$10,000.00",
+            "chargeStatus": "Investigation",
+            "releaseCode": "Investigated and Charged",
+            "courtCase": "Docket TBD"
+          },
+          {
+            "charge": "Assault - Investigation",
+            "offenseCode": "1399",
+            "bail": null,
+            "chargeStatus": "Investigation",
+            "releaseCode": "Investigated and Charged",
+            "courtCase": "Docket TBD"
+          },
+          {
+            "charge": "Assault - Investigation",
+            "offenseCode": "1399",
+            "bail": null,
+            "chargeStatus": "Investigation",
+            "releaseCode": "Investigated and Charged",
+            "courtCase": "Docket TBD"
+          },
+          {
+            "charge": "Assault - Investigation",
+            "offenseCode": "1399",
+            "bail": null,
+            "chargeStatus": "Investigation",
+            "releaseCode": "Investigated and Charged",
+            "courtCase": "Docket TBD"
+          }
+        ],
+        "unmatchedSocrataCharges": [],
+        "bookingHistory": [
+          {
+            "bookingNumber": "2026-010054",
+            "dateArrested": "2026-07-19T00:50:00.000",
+            "dateReleased": "2026-09-03T20:15:12.000",
+            "bookingStatus": "Released"
+          },
+          {
+            "bookingNumber": "2026-005728",
+            "dateArrested": "2026-04-28T02:23:00.000",
+            "dateReleased": "2026-04-28T17:55:51.000",
+            "bookingStatus": "Released"
+          },
+          {
+            "bookingNumber": "2026-004152",
+            "dateArrested": "2026-03-27T00:51:00.000",
+            "dateReleased": "2026-03-27T16:56:59.000",
+            "bookingStatus": "Released"
+          },
+          {
+            "bookingNumber": "2025-014855",
+            "dateArrested": "2025-10-15T16:09:00.000",
+            "dateReleased": "2025-10-16T17:22:34.000",
+            "bookingStatus": "Released"
+          }
+        ],
+        "portalDetailAt": "2026-09-27T15:11:44.387",
+        "statusSource": "portal",
+        "portalCheckedAt": "2026-09-27T15:11:44.387"
+      },
+      "changeLog": [
+        {
+          "idnum": "2026-010054",
+          "source": "kc_dajd",
+          "facility": "King County Correctional Facility",
+          "bookingNumber": "2026-010054",
+          "name": "WOODRUFF, JAYDON ROSE",
+          "status": "released",
+          "firstSeen": "09/13/2026, 13:06:36",
+          "releasedAt": "2026-09-03T20:15:12.000",
+          "bookingDate": "2026-07-19T01:17:15.000",
+          "charges": [
+            {
+              "charge": "Assault - Investigation",
+              "offenseCode": "1399",
+              "bail": null,
+              "chargeStatus": null,
+              "releaseCode": "Booked or Released in Error",
+              "courtCase": "Docket TBD",
+              "court": "King County District Court Seattle Division",
+              "causeNumber": "Docket TBD",
+              "rcw": "1399"
+            },
+            {
+              "charge": "Robbery 2",
+              "offenseCode": "9A.56.210",
+              "bail": "$10,000.00",
+              "chargeStatus": "Charged Awaiting Trial",
+              "releaseCode": "Court Release - Court Action",
+              "courtCase": "261004494",
+              "court": "King County Superior Court - KCCH",
+              "causeNumber": "261004494",
+              "rcw": "9A.56.210"
+            },
+            {
+              "charge": "Assault 3",
+              "offenseCode": "9A.36.031",
+              "bail": null,
+              "chargeStatus": "Charged Awaiting Trial",
+              "releaseCode": "Court Release - Court Action",
+              "courtCase": "261004494",
+              "court": "King County Superior Court - KCCH",
+              "causeNumber": "261004494",
+              "rcw": "9A.36.031"
+            },
+            {
+              "charge": "Theft",
+              "offenseCode": "12A.08.060",
+              "bail": "$250.00",
+              "chargeStatus": "Charged Awaiting Trial",
+              "releaseCode": "Court Release - Court Action",
+              "courtCase": "4260002688",
+              "court": "Seattle Municipal Court",
+              "causeNumber": "4260002688",
+              "rcw": "12A.08.060"
+            },
+            {
+              "charge": "Resisting Arrest",
+              "offenseCode": "12A.16.050",
+              "bail": "$500.00",
+              "chargeStatus": "Charged Awaiting Trial",
+              "releaseCode": "Court Release - Court Action",
+              "courtCase": "4260002688",
+              "court": "Seattle Municipal Court",
+              "causeNumber": "4260002688",
+              "rcw": "12A.16.050"
+            },
+            {
+              "charge": "Theft",
+              "offenseCode": "12A.08.060",
+              "bail": "$250.00",
+              "chargeStatus": "Charged Awaiting Trial",
+              "releaseCode": "Court Release - Court Action",
+              "courtCase": "4260002731",
+              "court": "Seattle Municipal Court",
+              "causeNumber": "4260002731",
+              "rcw": "12A.08.060"
+            },
+            {
+              "charge": "Obstructing a public officer",
+              "offenseCode": "12A.16.010",
+              "bail": null,
+              "chargeStatus": "Charged Awaiting Trial",
+              "releaseCode": "Court Release - Court Action",
+              "courtCase": "4260002731",
+              "court": "Seattle Municipal Court",
+              "causeNumber": "4260002731",
+              "rcw": "12A.16.010"
+            },
+            {
+              "charge": "Pedestrian Interference",
+              "offenseCode": "12A.12.015",
+              "bail": null,
+              "chargeStatus": "Charged Awaiting Trial",
+              "releaseCode": "Court Release - Court Action",
+              "courtCase": "4260002731",
+              "court": "Seattle Municipal Court",
+              "causeNumber": "4260002731",
+              "rcw": "12A.12.015"
+            },
+            {
+              "charge": "Robbery - Investigation",
+              "offenseCode": "1299",
+              "bail": "$10,000.00",
+              "chargeStatus": "Investigation",
+              "releaseCode": "Investigated and Charged",
+              "courtCase": "Docket TBD",
+              "court": "King County District Court Seattle Division",
+              "causeNumber": "Docket TBD",
+              "rcw": "1299"
+            },
+            {
+              "charge": "Assault - Investigation",
+              "offenseCode": "1399",
+              "bail": null,
+              "chargeStatus": "Investigation",
+              "releaseCode": "Investigated and Charged",
+              "courtCase": "Docket TBD",
+              "court": "King County District Court Seattle Division",
+              "causeNumber": "Docket TBD",
+              "rcw": "1399"
+            },
+            {
+              "charge": "Assault - Investigation",
+              "offenseCode": "1399",
+              "bail": null,
+              "chargeStatus": "Investigation",
+              "releaseCode": "Investigated and Charged",
+              "courtCase": "Docket TBD",
+              "court": "King County District Court Seattle Division",
+              "causeNumber": "Docket TBD",
+              "rcw": "1399"
+            },
+            {
+              "charge": "Assault - Investigation",
+              "offenseCode": "1399",
+              "bail": null,
+              "chargeStatus": "Investigation",
+              "releaseCode": "Investigated and Charged",
+              "courtCase": "Docket TBD",
+              "court": "King County Superior Court - KCCH",
+              "causeNumber": "Docket TBD",
+              "rcw": "1399"
+            }
+          ],
+          "hasDetail": true,
+          "scheduledReleaseDate": null,
+          "releaseSource": "county",
+          "releaseType": null,
+          "unmatchedSocrataCharges": [],
+          "bookingHistory": [
+            {
+              "bookingNumber": "2026-010054",
+              "dateArrested": "2026-07-19T00:50:00.000",
+              "dateReleased": "2026-09-03T20:15:12.000",
+              "bookingStatus": "Released"
+            },
+            {
+              "bookingNumber": "2026-005728",
+              "dateArrested": "2026-04-28T02:23:00.000",
+              "dateReleased": "2026-04-28T17:55:51.000",
+              "bookingStatus": "Released"
+            },
+            {
+              "bookingNumber": "2026-004152",
+              "dateArrested": "2026-03-27T00:51:00.000",
+              "dateReleased": "2026-03-27T16:56:59.000",
+              "bookingStatus": "Released"
+            },
+            {
+              "bookingNumber": "2025-014855",
+              "dateArrested": "2025-10-15T16:09:00.000",
+              "dateReleased": "2025-10-16T17:22:34.000",
+              "bookingStatus": "Released"
+            }
+          ],
+          "statusSource": "portal",
+          "portalCheckedAt": "2026-09-27T15:11:44.387"
+        }
+      ]
+    },
+    "2026-010266": {
+      "why": "portal release STARKS: 11 matched charges + 1 in unmatchedSocrataCharges",
+      "rosterMatches": 1,
+      "changeLogMatches": 1,
+      "roster": {
+        "idnum": "2026-010266",
+        "source": "kc_dajd",
+        "facility": "Maleng Regional Justice Center",
+        "bookingNumber": "2026-010266",
+        "name": "STARKS, BRANDON LEONARD",
+        "status": "released",
+        "firstSeen": "09/13/2026, 13:06:36",
+        "releasedAt": "2026-09-21T14:08:13.000",
+        "bookingDate": "2026-07-22T20:20:59.000",
+        "charges": [
+          {
+            "charge": "Vehicle prowling 2nd degree - Third or Subsequent Conviction",
+            "offenseCode": "9A.52.100(3)",
+            "bail": null,
+            "chargeStatus": "Charged Awaiting Trial",
+            "releaseCode": "Case Dismissed",
+            "courtCase": "251042941",
+            "court": "King County Superior Court - KCCH",
+            "causeNumber": "251042941",
+            "rcw": "9A.52.100(3)"
+          },
+          {
+            "charge": "Vehicle prowling 2nd degree - Third or Subsequent Conviction",
+            "offenseCode": "9A.52.100(3)",
+            "bail": null,
+            "chargeStatus": "Charged Awaiting Trial",
+            "releaseCode": "Case Dismissed",
+            "courtCase": "251042941",
+            "court": "King County Superior Court - KCCH",
+            "causeNumber": "251042941",
+            "rcw": "9A.52.100(3)"
+          },
+          {
+            "charge": "Vehicle prowling 2nd degree - Third or Subsequent Conviction",
+            "offenseCode": "9A.52.100(3)",
+            "bail": null,
+            "chargeStatus": "Charged Awaiting Trial",
+            "releaseCode": "Case Dismissed",
+            "courtCase": "251042941",
+            "court": "King County Superior Court - KCCH",
+            "causeNumber": "251042941",
+            "rcw": "9A.52.100(3)"
+          },
+          {
+            "charge": "Vehicle prowling 2nd degree",
+            "offenseCode": "9A.52.100(2)",
+            "bail": null,
+            "chargeStatus": "Charged Awaiting Trial",
+            "releaseCode": "Case Dismissed",
+            "courtCase": "251042941",
+            "court": "King County Superior Court - KCCH",
+            "causeNumber": "251042941",
+            "rcw": "9A.52.100(2)"
+          },
+          {
+            "charge": "Burglary 1",
+            "offenseCode": "9A.52.020",
+            "bail": "$100,000.00",
+            "chargeStatus": "Charged Awaiting Trial",
+            "releaseCode": "Court Release - Court Action",
+            "courtCase": "261034288",
+            "court": "King County Superior Court - NMRJC",
+            "causeNumber": "261034288",
+            "rcw": "9A.52.020"
+          },
+          {
+            "charge": "Assault 4",
+            "offenseCode": "9A.36.041",
+            "bail": null,
+            "chargeStatus": "Charged Awaiting Trial",
+            "releaseCode": "Court Release - Court Action",
+            "courtCase": "261034288",
+            "court": "King County Superior Court - NMRJC",
+            "causeNumber": "261034288",
+            "rcw": "9A.36.041"
+          },
+          {
+            "charge": "Theft 3",
+            "offenseCode": "9A.56.050",
+            "bail": null,
+            "chargeStatus": "Charged Awaiting Trial",
+            "releaseCode": "Court Release - Court Action",
+            "courtCase": "261034288",
+            "court": "King County Superior Court - NMRJC",
+            "causeNumber": "261034288",
+            "rcw": "9A.56.050"
+          },
+          {
+            "charge": "Assault 4",
+            "offenseCode": "9A.36.041",
+            "bail": null,
+            "chargeStatus": "Charged Awaiting Trial",
+            "releaseCode": "Court Release - Court Action",
+            "courtCase": "261034288",
+            "court": "King County Superior Court - NMRJC",
+            "causeNumber": "261034288",
+            "rcw": "9A.36.041"
+          },
+          {
+            "charge": "Vehicle prowling 2nd degree - Third or Subsequent Conviction",
+            "offenseCode": "9A.52.100(3)",
+            "bail": null,
+            "chargeStatus": "Institutional Hold",
+            "releaseCode": "Transfer of Custody",
+            "courtCase": "251042941",
+            "court": "King County Superior Court - KCCH",
+            "causeNumber": "251042941",
+            "rcw": "9A.52.100(3)"
+          },
+          {
+            "charge": "Vehicle prowling 2nd degree - Third or Subsequent Conviction",
+            "offenseCode": "9A.52.100(3)",
+            "bail": null,
+            "chargeStatus": "Institutional Hold",
+            "releaseCode": "Transfer of Custody",
+            "courtCase": "251042941"
+          },
+          {
+            "charge": "Transportation Order",
+            "offenseCode": "72.68.020",
+            "bail": null,
+            "chargeStatus": "Institutional Hold",
+            "releaseCode": "Transfer of Custody",
+            "courtCase": "261034288",
+            "court": "King County Superior Court - NMRJC",
+            "causeNumber": "261034288",
+            "rcw": "72.68.020"
+          }
+        ],
+        "hasDetail": true,
+        "scheduledReleaseDate": null,
+        "releaseSource": "county",
+        "releaseType": null,
+        "socrataCharges": [
+          {
+            "charge": "Vehicle prowling 2nd degree - Third or Subsequent Conviction",
+            "court": "King County Superior Court - KCCH",
+            "causeNumber": "251042941",
+            "rcw": "9A.52.100(3)"
+          },
+          {
+            "charge": "Transportation Order",
+            "court": "King County Superior Court - NMRJC",
+            "causeNumber": "261034288",
+            "rcw": "72.68.020"
+          },
+          {
+            "charge": "Burglary 1",
+            "court": "King County Superior Court - NMRJC",
+            "causeNumber": "261034288",
+            "rcw": "9A.52.020"
+          },
+          {
+            "charge": "Assault 4",
+            "court": "King County Superior Court - NMRJC",
+            "causeNumber": "261034288",
+            "rcw": "9A.36.041"
+          },
+          {
+            "charge": "Theft 3",
+            "court": "King County Superior Court - NMRJC",
+            "causeNumber": "261034288",
+            "rcw": "9A.56.050"
+          },
+          {
+            "charge": "Assault 4",
+            "court": "King County Superior Court - NMRJC",
+            "causeNumber": "261034288",
+            "rcw": "9A.36.041"
+          },
+          {
+            "charge": "Vehicle prowling 2nd degree - Third or Subsequent Conviction",
+            "court": "King County Superior Court - KCCH",
+            "causeNumber": "251042941",
+            "rcw": "9A.52.100(3)"
+          },
+          {
+            "charge": "Vehicle prowling 2nd degree",
+            "court": "King County Superior Court - KCCH",
+            "causeNumber": "251042941",
+            "rcw": "9A.52.100(2)"
+          },
+          {
+            "charge": "Vehicle prowling 2nd degree - Third or Subsequent Conviction",
+            "court": "King County Superior Court - KCCH",
+            "causeNumber": "251042941",
+            "rcw": "9A.52.100(3)"
+          },
+          {
+            "charge": "Vehicle prowling 2nd degree - Third or Subsequent Conviction",
+            "court": "King County Superior Court - KCCH",
+            "causeNumber": "251042941",
+            "rcw": "9A.52.100(3)"
+          },
+          {
+            "charge": "Vehicle prowling 2nd degree",
+            "court": "King County Superior Court - KCCH",
+            "causeNumber": "251042941",
+            "rcw": "9A.52.100(2)"
+          }
+        ],
+        "portalCharges": [
+          {
+            "charge": "Vehicle prowling 2nd degree - Third or Subsequent Conviction",
+            "offenseCode": "9A.52.100(3)",
+            "bail": null,
+            "chargeStatus": "Charged Awaiting Trial",
+            "releaseCode": "Case Dismissed",
+            "courtCase": "251042941"
+          },
+          {
+            "charge": "Vehicle prowling 2nd degree - Third or Subsequent Conviction",
+            "offenseCode": "9A.52.100(3)",
+            "bail": null,
+            "chargeStatus": "Charged Awaiting Trial",
+            "releaseCode": "Case Dismissed",
+            "courtCase": "251042941"
+          },
+          {
+            "charge": "Vehicle prowling 2nd degree - Third or Subsequent Conviction",
+            "offenseCode": "9A.52.100(3)",
+            "bail": null,
+            "chargeStatus": "Charged Awaiting Trial",
+            "releaseCode": "Case Dismissed",
+            "courtCase": "251042941"
+          },
+          {
+            "charge": "Vehicle prowling 2nd degree",
+            "offenseCode": "9A.52.100(2)",
+            "bail": null,
+            "chargeStatus": "Charged Awaiting Trial",
+            "releaseCode": "Case Dismissed",
+            "courtCase": "251042941"
+          },
+          {
+            "charge": "Burglary 1",
+            "offenseCode": "9A.52.020",
+            "bail": "$100,000.00",
+            "chargeStatus": "Charged Awaiting Trial",
+            "releaseCode": "Court Release - Court Action",
+            "courtCase": "261034288"
+          },
+          {
+            "charge": "Assault 4",
+            "offenseCode": "9A.36.041",
+            "bail": null,
+            "chargeStatus": "Charged Awaiting Trial",
+            "releaseCode": "Court Release - Court Action",
+            "courtCase": "261034288"
+          },
+          {
+            "charge": "Theft 3",
+            "offenseCode": "9A.56.050",
+            "bail": null,
+            "chargeStatus": "Charged Awaiting Trial",
+            "releaseCode": "Court Release - Court Action",
+            "courtCase": "261034288"
+          },
+          {
+            "charge": "Assault 4",
+            "offenseCode": "9A.36.041",
+            "bail": null,
+            "chargeStatus": "Charged Awaiting Trial",
+            "releaseCode": "Court Release - Court Action",
+            "courtCase": "261034288"
+          },
+          {
+            "charge": "Vehicle prowling 2nd degree - Third or Subsequent Conviction",
+            "offenseCode": "9A.52.100(3)",
+            "bail": null,
+            "chargeStatus": "Institutional Hold",
+            "releaseCode": "Transfer of Custody",
+            "courtCase": "251042941"
+          },
+          {
+            "charge": "Vehicle prowling 2nd degree - Third or Subsequent Conviction",
+            "offenseCode": "9A.52.100(3)",
+            "bail": null,
+            "chargeStatus": "Institutional Hold",
+            "releaseCode": "Transfer of Custody",
+            "courtCase": "251042941"
+          },
+          {
+            "charge": "Transportation Order",
+            "offenseCode": "72.68.020",
+            "bail": null,
+            "chargeStatus": "Institutional Hold",
+            "releaseCode": "Transfer of Custody",
+            "courtCase": "261034288"
+          }
+        ],
+        "unmatchedSocrataCharges": [
+          {
+            "charge": "Vehicle prowling 2nd degree",
+            "court": "King County Superior Court - KCCH",
+            "causeNumber": "251042941",
+            "rcw": "9A.52.100(2)"
+          }
+        ],
+        "bookingHistory": [
+          {
+            "bookingNumber": "2026-010266",
+            "dateArrested": "2026-07-22T19:00:00.000",
+            "dateReleased": "2026-09-21T14:08:13.000",
+            "bookingStatus": "Released"
+          }
+        ],
+        "portalDetailAt": "2026-09-27T15:11:44.387",
+        "statusSource": "portal",
+        "portalCheckedAt": "2026-09-27T15:11:44.387"
+      },
+      "changeLog": [
+        {
+          "idnum": "2026-010266",
+          "source": "kc_dajd",
+          "facility": "Maleng Regional Justice Center",
+          "bookingNumber": "2026-010266",
+          "name": "STARKS, BRANDON LEONARD",
+          "status": "released",
+          "firstSeen": "09/13/2026, 13:06:36",
+          "releasedAt": "2026-09-21T14:08:13.000",
+          "bookingDate": "2026-07-22T20:20:59.000",
+          "charges": [
+            {
+              "charge": "Vehicle prowling 2nd degree - Third or Subsequent Conviction",
+              "offenseCode": "9A.52.100(3)",
+              "bail": null,
+              "chargeStatus": "Charged Awaiting Trial",
+              "releaseCode": "Case Dismissed",
+              "courtCase": "251042941",
+              "court": "King County Superior Court - KCCH",
+              "causeNumber": "251042941",
+              "rcw": "9A.52.100(3)"
+            },
+            {
+              "charge": "Vehicle prowling 2nd degree - Third or Subsequent Conviction",
+              "offenseCode": "9A.52.100(3)",
+              "bail": null,
+              "chargeStatus": "Charged Awaiting Trial",
+              "releaseCode": "Case Dismissed",
+              "courtCase": "251042941",
+              "court": "King County Superior Court - KCCH",
+              "causeNumber": "251042941",
+              "rcw": "9A.52.100(3)"
+            },
+            {
+              "charge": "Vehicle prowling 2nd degree - Third or Subsequent Conviction",
+              "offenseCode": "9A.52.100(3)",
+              "bail": null,
+              "chargeStatus": "Charged Awaiting Trial",
+              "releaseCode": "Case Dismissed",
+              "courtCase": "251042941",
+              "court": "King County Superior Court - KCCH",
+              "causeNumber": "251042941",
+              "rcw": "9A.52.100(3)"
+            },
+            {
+              "charge": "Vehicle prowling 2nd degree",
+              "offenseCode": "9A.52.100(2)",
+              "bail": null,
+              "chargeStatus": "Charged Awaiting Trial",
+              "releaseCode": "Case Dismissed",
+              "courtCase": "251042941",
+              "court": "King County Superior Court - KCCH",
+              "causeNumber": "251042941",
+              "rcw": "9A.52.100(2)"
+            },
+            {
+              "charge": "Burglary 1",
+              "offenseCode": "9A.52.020",
+              "bail": "$100,000.00",
+              "chargeStatus": "Charged Awaiting Trial",
+              "releaseCode": "Court Release - Court Action",
+              "courtCase": "261034288",
+              "court": "King County Superior Court - NMRJC",
+              "causeNumber": "261034288",
+              "rcw": "9A.52.020"
+            },
+            {
+              "charge": "Assault 4",
+              "offenseCode": "9A.36.041",
+              "bail": null,
+              "chargeStatus": "Charged Awaiting Trial",
+              "releaseCode": "Court Release - Court Action",
+              "courtCase": "261034288",
+              "court": "King County Superior Court - NMRJC",
+              "causeNumber": "261034288",
+              "rcw": "9A.36.041"
+            },
+            {
+              "charge": "Theft 3",
+              "offenseCode": "9A.56.050",
+              "bail": null,
+              "chargeStatus": "Charged Awaiting Trial",
+              "releaseCode": "Court Release - Court Action",
+              "courtCase": "261034288",
+              "court": "King County Superior Court - NMRJC",
+              "causeNumber": "261034288",
+              "rcw": "9A.56.050"
+            },
+            {
+              "charge": "Assault 4",
+              "offenseCode": "9A.36.041",
+              "bail": null,
+              "chargeStatus": "Charged Awaiting Trial",
+              "releaseCode": "Court Release - Court Action",
+              "courtCase": "261034288",
+              "court": "King County Superior Court - NMRJC",
+              "causeNumber": "261034288",
+              "rcw": "9A.36.041"
+            },
+            {
+              "charge": "Vehicle prowling 2nd degree - Third or Subsequent Conviction",
+              "offenseCode": "9A.52.100(3)",
+              "bail": null,
+              "chargeStatus": "Institutional Hold",
+              "releaseCode": "Transfer of Custody",
+              "courtCase": "251042941",
+              "court": "King County Superior Court - KCCH",
+              "causeNumber": "251042941",
+              "rcw": "9A.52.100(3)"
+            },
+            {
+              "charge": "Vehicle prowling 2nd degree - Third or Subsequent Conviction",
+              "offenseCode": "9A.52.100(3)",
+              "bail": null,
+              "chargeStatus": "Institutional Hold",
+              "releaseCode": "Transfer of Custody",
+              "courtCase": "251042941"
+            },
+            {
+              "charge": "Transportation Order",
+              "offenseCode": "72.68.020",
+              "bail": null,
+              "chargeStatus": "Institutional Hold",
+              "releaseCode": "Transfer of Custody",
+              "courtCase": "261034288",
+              "court": "King County Superior Court - NMRJC",
+              "causeNumber": "261034288",
+              "rcw": "72.68.020"
+            }
+          ],
+          "hasDetail": true,
+          "scheduledReleaseDate": null,
+          "releaseSource": "county",
+          "releaseType": null,
+          "unmatchedSocrataCharges": [
+            {
+              "charge": "Vehicle prowling 2nd degree",
+              "court": "King County Superior Court - KCCH",
+              "causeNumber": "251042941",
+              "rcw": "9A.52.100(2)"
+            }
+          ],
+          "bookingHistory": [
+            {
+              "bookingNumber": "2026-010266",
+              "dateArrested": "2026-07-22T19:00:00.000",
+              "dateReleased": "2026-09-21T14:08:13.000",
+              "bookingStatus": "Released"
+            }
+          ],
+          "statusSource": "portal",
+          "portalCheckedAt": "2026-09-27T15:11:44.387"
+        }
+      ]
+    }
+  }
+}
