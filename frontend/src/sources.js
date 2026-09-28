@@ -1,3 +1,5 @@
+import { entryDateParts } from './dates.js'
+
 // The 4 independently-scraped sources that make up this site. Each has its
 // own data/<id>/ directory (separate roster/change_log/status.json) written
 // by a separate scraper — see ../../scrapers/*.js and ../../scrape.js.
@@ -11,7 +13,9 @@ export const SOURCES = [
   { id: 'kirkland', label: 'Kirkland', cadence: 'Live · checked every 30 min' },
   { id: 'kc_dajd', label: 'King County DAJD', cadence: 'Periodic · the county republishes this dataset every 1–2 weeks, not live',
     // Per record: only on in-custody bookings the DAJD portal hasn't checked
-    // yet (entry.statusSource !== 'portal') -- "in custody" there still comes
+    // yet (entry.statusSource !== 'portal') and that the portal's last full
+    // check didn't miss (those get entryLagNote()'s "Not found" note
+    // instead) -- "in custody" there still comes
     // from the Socrata feed, republished roughly every 1-2 weeks, so it may
     // no longer be true. A release is a settled fact either way, and
     // portal-checked records are current as of the last portal run.
@@ -24,13 +28,30 @@ export function sourceLabel(id) {
   return SOURCES.find(s => s.id === id)?.label || id
 }
 
-// The note for one record: in-custody records the DAJD portal hasn't
-// checked, plus any in-custody record the portal's last full check didn't
-// list (portalMissing), since its portal status may be out of date. Null for
-// released records and portal-checked ones the portal still lists.
+// "MM/DD/YYYY" in Pacific time for a KC portalMissing timestamp (marker-less
+// UTC ISO); null if it doesn't parse, so no date is claimed.
+function portalMissingDate(raw) {
+  const p = entryDateParts('kc_dajd', raw)
+  if (!p) return null
+  const pad = n => String(n).padStart(2, '0')
+  return `${pad(p.month)}/${pad(p.day)}/${p.year}`
+}
+
+// The note for one in-custody record (null for released ones):
+// - the portal's last full check didn't list it (portalMissing), portal-
+//   checked or not: "Not found on the county's jail lookup since <date>",
+//   since its status may be out of date whichever side set it;
+// - otherwise, not yet checked by the DAJD portal: the Socrata lag note;
+// - portal-checked and still listed: none.
 export function entryLagNote(entry) {
   if (entry.status !== 'in_custody') return null
-  if (entry.statusSource === 'portal' && !entry.portalMissing) return null
+  if (entry.source === 'kc_dajd' && entry.portalMissing) {
+    const since = portalMissingDate(entry.portalMissing)
+    return since
+      ? `Not found on the county's jail lookup since ${since}; status may be out of date`
+      : "Not found on the county's jail lookup; status may be out of date"
+  }
+  if (entry.statusSource === 'portal') return null
   return SOURCES.find(s => s.id === entry.source)?.lagNote || null
 }
 
