@@ -5,10 +5,13 @@ name: Scrape & Deploy (King County DAJD portal)
 # lib/runPortal.js and CLAUDE.md). The portal needs a real browser, so this
 # is the only workflow that installs Playwright's Chromium. Every 2 hours:
 # the two 24-hour views give a 24-hour window, so this still sees each
-# booking/release many times even when GitHub skips scheduled runs.
+# booking/release many times even if a run is missed.
+#
+# No `schedule:` trigger: GitHub ran only 1 of the first 5 scheduled slots.
+# cron-job.org starts this workflow through the GitHub API (workflow_dispatch,
+# default inputs) every 2 hours instead. Its trigger token expires 2026-12-27
+# and must be replaced in cron-job.org before then (see CLAUDE.md).
 on:
-  schedule:
-    - cron: '17 */2 * * *'
   workflow_dispatch:
     inputs:
       dry_run:
