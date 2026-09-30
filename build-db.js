@@ -36,32 +36,12 @@ import fs from 'fs';
 import path from 'path';
 import { execSync } from 'child_process';
 import { DatabaseSync } from 'node:sqlite';
+import { pacificToUtc } from './utils.js';
 
 const SOURCES = ['score', 'kent', 'kirkland', 'kc_dajd'];
 const DATA_DIR = path.join(path.dirname(new URL(import.meta.url).pathname), 'data');
 
 // --- Timestamps ---
-
-const PACIFIC = new Intl.DateTimeFormat('en-US', {
-  timeZone: 'America/Los_Angeles', hourCycle: 'h23',
-  year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit',
-});
-
-// Pacific's UTC offset (ms, negative) at a UTC instant.
-function pacificOffset(ms) {
-  const p = Object.fromEntries(PACIFIC.formatToParts(new Date(ms)).map(x => [x.type, x.value]));
-  return Date.UTC(+p.year, +p.month - 1, +p.day, +p.hour, +p.minute, +p.second) - Math.floor(ms / 1000) * 1000;
-}
-
-// Pacific wall-clock time -> UTC ms. In the repeated hour when DST ends the
-// earlier (PDT) reading is used; none of the sources says which it means.
-function pacificToUtc(y, mo, d, h, mi, s) {
-  const wall = Date.UTC(y, mo - 1, d, h, mi, s);
-  let t = wall - pacificOffset(wall);
-  const o2 = pacificOffset(t);
-  if (o2 !== pacificOffset(wall)) t = wall - o2;
-  return t;
-}
 
 const validParts = (y, mo, d, h, mi, s) => {
   const t = Date.UTC(y, mo - 1, d, h, mi, s);

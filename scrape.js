@@ -5,7 +5,7 @@ import { dirname } from 'path';
 import { runScrape } from './lib/runScraper.js';
 import { runCrossReference } from './lib/crossReferenceDOC.js';
 import { runPortal } from './lib/runPortal.js';
-import { nowPST } from './utils.js';
+import { nowPST, parseNowPST } from './utils.js';
 import * as kcdajd from './scrapers/kcdajd.js';
 import * as score from './scrapers/score.js';
 import * as kent from './scrapers/kent.js';
@@ -15,9 +15,20 @@ import * as wadoc from './scrapers/wadoc.js';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const DATA_DIR = path.join(__dirname, 'data');
 
+// A live source that can't be reached is only a warning while its last
+// successful update is under this many hours old; after that the run fails.
+// SCORE's rebuild windows and short outages at SCORE and NORCOM (Kirkland) --
+// 90 minutes on 2026-09-29 -- would otherwise turn every run red for
+// something that fixes itself, while a source down for hours still does.
+// Only the three live sources get it: KC DAJD's status.json is also
+// refreshed by the portal every 2 hours, so its lastUpdated doesn't say
+// whether the daily Socrata sync worked.
+const LIVE_FAILURE_GRACE_HOURS = 2;
+
 const SOURCES = {
   score: {
     sourceId: 'score',
+    failureGraceHours: LIVE_FAILURE_GRACE_HOURS,
     label: 'SCORE',
     dataDir: path.join(DATA_DIR, 'score'),
     fetchRoster: score.scrapeRoster,
@@ -33,6 +44,7 @@ const SOURCES = {
   },
   kent: {
     sourceId: 'kent',
+    failureGraceHours: LIVE_FAILURE_GRACE_HOURS,
     label: 'Kent',
     dataDir: path.join(DATA_DIR, 'kent'),
     fetchRoster: kent.scrapeRoster,
@@ -44,6 +56,7 @@ const SOURCES = {
   },
   kirkland: {
     sourceId: 'kirkland',
+    failureGraceHours: LIVE_FAILURE_GRACE_HOURS,
     label: 'Kirkland',
     dataDir: path.join(DATA_DIR, 'kirkland'),
     fetchRoster: kirkland.scrapeRoster,
@@ -116,11 +129,42 @@ async function main() {
       process.exitCode = 1;
       continue;
     }
-    await runScrape(config);
+    const result = await runScrape(config);
+    if (result?.failed) reportFailure(config, result);
   }
 }
 
-main().catch(err => {
-  console.error('Fatal:', err);
-  process.exit(1);
-});
+// GitHub Actions annotations: ::warning:: shows on the run page without
+// failing it; ::error:: plus a non-zero exit fails it.
+export function failureVerdict(config, result, now = new Date()) {
+  const where = `${config.label}: ${result.message}`;
+  // A safety abort means the data looks wrong, not that the site was down --
+  // someone has to decide whether to override it, so it never waits.
+  if (result.failed === 'safety' || !config.failureGraceHours) return { level: 'error', text: where };
+  let lastUpdated = null;
+  try {
+    lastUpdated = JSON.parse(fs.readFileSync(path.join(config.dataDir, 'status.json'), 'utf-8')).lastUpdated;
+  } catch {}
+  const last = parseNowPST(lastUpdated);
+  if (!last) return { level: 'error', text: `${where} (no previous successful update on record)` };
+  const hours = (now - last) / 3600000;
+  const since = `last successful update ${hours.toFixed(1)}h ago (${lastUpdated} Pacific)`;
+  if (hours <= config.failureGraceHours) {
+    return { level: 'warning', text: `${where} -- ${since}; not failing the run until it's been over ${config.failureGraceHours}h` };
+  }
+  return { level: 'error', text: `${where} -- ${since}, over the ${config.failureGraceHours}h limit` };
+}
+
+function reportFailure(config, result) {
+  const v = failureVerdict(config, result);
+  console.log(`::${v.level} title=${config.label} scrape failed::${v.text}`);
+  if (v.level === 'error') process.exitCode = 1;
+}
+
+// Only when run as `node scrape.js ...`, so tests can import failureVerdict.
+if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  main().catch(err => {
+    console.error('Fatal:', err);
+    process.exit(1);
+  });
+}
