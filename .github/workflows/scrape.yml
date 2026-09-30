@@ -59,6 +59,10 @@ jobs:
       - name: Install scraper dependencies
         run: npm install
 
+      # A source that can't be reached only fails this step once its last
+      # successful update is over 2 hours old (LIVE_FAILURE_GRACE_HOURS in
+      # scrape.js); before that it's a ::warning:: annotation on the run and
+      # the run stays green. A safety-check abort always fails it.
       - name: Run scrapers
         id: scrape
         continue-on-error: true
@@ -96,8 +100,8 @@ jobs:
   # GITHUB_TOKEN don't trigger other workflows.)
   deploy:
     needs: scrape
-    # Deploys even when a source failed: the scrape job commits the sources
-    # that worked, then marks itself failed in its last step.
+    # Deploys even when the scrape job failed: it commits the sources that
+    # worked, then marks itself failed in its last step.
     if: ${{ !cancelled() }}
     runs-on: ubuntu-latest
     # Shared by all four scrape workflows, so two Pages deploys never overlap.
