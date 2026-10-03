@@ -6,7 +6,7 @@ export default function Header() {
           <span className="header-county">King County</span>
           <h1>Jail Roster</h1>
         </div>
-        <div className="header-sub">Public Records — DAJD · SCORE · Kent · Kirkland</div>
+        <div className="header-sub">Public Records — DAJD · SCORE · Kent · Kirkland · Issaquah</div>
       </div>
     </header>
   )

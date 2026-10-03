@@ -18,8 +18,9 @@
 //               aren't unique.
 //   person_key  "<source>:<id>" -- SCORE Name Number, KC DAJD UCN (from the
 //               portal; not in change_log.json and not shown on the site),
-//               Kent person id. NULL for Kirkland, which publishes no person
-//               id, and for KC bookings the portal hasn't matched yet.
+//               Kent person id, Issaquah person number. NULL for Kirkland,
+//               which publishes no person id, and for KC bookings the portal
+//               hasn't matched yet.
 //               Namespaced by source so ids from different systems never
 //               join by accident.
 //
@@ -38,7 +39,7 @@ import { execSync } from 'child_process';
 import { DatabaseSync } from 'node:sqlite';
 import { pacificToUtc } from './utils.js';
 
-const SOURCES = ['score', 'kent', 'kirkland', 'kc_dajd'];
+const SOURCES = ['score', 'kent', 'kirkland', 'issaquah', 'kc_dajd'];
 const DATA_DIR = path.join(path.dirname(new URL(import.meta.url).pathname), 'data');
 
 // --- Timestamps ---
@@ -98,6 +99,7 @@ function personKey(source, e) {
   if (source === 'score') return `score:${e.idnum}`;
   if (source === 'kc_dajd') return e.ucn ? `kc_dajd:${e.ucn}` : null;
   if (source === 'kent') return e.detailId ? `kent:${e.detailId}` : null;
+  if (source === 'issaquah') return e.personNumber ? `issaquah:${e.personNumber}` : null;
   return null;
 }
 
@@ -106,8 +108,8 @@ function personKey(source, e) {
 const SCHEMA = `
 CREATE TABLE bookings (
   booking_id             TEXT PRIMARY KEY,   -- "<source>:<idnum>"
-  source                 TEXT NOT NULL,      -- score | kent | kirkland | kc_dajd
-  idnum                  TEXT NOT NULL,      -- SCORE: Name Number; others: booking number
+  source                 TEXT NOT NULL,      -- score | kent | kirkland | issaquah | kc_dajd
+  idnum                  TEXT NOT NULL,      -- SCORE: Name Number; Issaquah: person number-booked at; others: booking number
   booking_number         TEXT,
   person_key             TEXT,               -- "<source>:<person id>", NULL if none
   name                   TEXT,
@@ -156,7 +158,10 @@ CREATE TABLE charges (
   release_reason     TEXT,                   -- KC DAJD (Socrata, per charge)
   release_code       TEXT,                   -- KC DAJD (portal disposition code)
   release_type       TEXT,                   -- Kent
-  arrest_agency      TEXT,                   -- SCORE (per charge)
+  arrest_agency      TEXT,                   -- SCORE, Issaquah (per charge)
+  billing_agency     TEXT,                   -- Issaquah
+  arrest_date_at     TEXT,                   -- Issaquah, UTC ISO
+  arrest_date_raw    TEXT,
   charge_date_at     TEXT,                   -- Kirkland, UTC ISO
   charge_date_raw    TEXT
 );
@@ -198,8 +203,8 @@ export function buildDb(outFile, dataDir = DATA_DIR) {
 
   const insBooking = db.prepare(`INSERT INTO bookings VALUES (${Array(29).fill('?').join(',')})`);
   const insCharge = db.prepare(`INSERT INTO charges (booking_id, source, seq, charge, offense_code, rcw, court, cause_number, court_case, warrant,
-    bail, bail_amount, bond_type, charge_status, disposition, release_reason, release_code, release_type, arrest_agency, charge_date_at, charge_date_raw)
-    VALUES (${Array(21).fill('?').join(',')})`);
+    bail, bail_amount, bond_type, charge_status, disposition, release_reason, release_code, release_type, arrest_agency, billing_agency, arrest_date_at, arrest_date_raw, charge_date_at, charge_date_raw)
+    VALUES (${Array(24).fill('?').join(',')})`);
   const insHistory = db.prepare(`INSERT INTO booking_history (source, person_key, booking_id, booking_number, is_this_booking, booked_at, booked_at_raw,
     arrested_at, arrested_at_raw, released_at, released_at_raw, release_type, booking_status)
     VALUES (${Array(13).fill('?').join(',')})`);
@@ -229,7 +234,8 @@ export function buildDb(outFile, dataDir = DATA_DIR) {
       charges.forEach((c, i) => insCharge.run(
         bookingId, source, i, str(c.charge), str(c.offenseCode), str(c.rcw), str(c.court), str(c.causeNumber), str(c.courtCase), str(c.warrant),
         str(c.bail), parseMoney(c.bail), str(c.bondType), str(c.chargeStatus), str(c.disposition), str(c.releaseReason), str(c.releaseCode),
-        str(c.releaseType), str(c.arrestAgency),
+        str(c.releaseType), str(c.arrestAgency), str(c.billingAgency),
+        toUtcIso(c.arrestDate, `${source}.charges.arrestDate`), str(c.arrestDate),
         toUtcIso(c.chargeDate, `${source}.charges.chargeDate`), str(c.chargeDate),
       ));
       if ((source === 'score' || source === 'kc_dajd') && Array.isArray(e.bookingHistory)) {

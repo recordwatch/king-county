@@ -1,6 +1,6 @@
 import { entryDateParts } from './dates.js'
 
-// The 4 independently-scraped sources that make up this site. Each has its
+// The 5 independently-scraped sources that make up this site. Each has its
 // own data/<id>/ directory (separate roster/change_log/status.json) written
 // by a separate scraper — see ../../scrapers/*.js and ../../scrape.js.
 // Kept in one place since App.jsx, StatBar, and the source filter all need
@@ -11,6 +11,7 @@ export const SOURCES = [
   { id: 'score', label: 'SCORE', cadence: 'Live · checked every 30 min' },
   { id: 'kent', label: 'Kent', cadence: 'Live · checked every 30 min' },
   { id: 'kirkland', label: 'Kirkland', cadence: 'Live · checked every 30 min' },
+  { id: 'issaquah', label: 'Issaquah', cadence: 'Live · checked every 30 min' },
   { id: 'kc_dajd', label: 'King County DAJD', cadence: 'Periodic · the county republishes this dataset every 1–2 weeks, not live',
     // Per record: only on in-custody bookings the DAJD portal hasn't checked
     // yet (entry.statusSource !== 'portal') and that the portal's last full
