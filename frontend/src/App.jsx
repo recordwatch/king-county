@@ -217,7 +217,8 @@ function HistoryPage() {
 
   useEffect(() => {
     loadCombinedLog().then(logData => {
-      setLog(logData)
+      // 'removed' = the county took the booking off its public lookup; not shown.
+      setLog(logData.filter(e => e.status !== 'removed'))
       setLoading(false)
     })
   }, [])
