@@ -336,63 +336,49 @@ function BailTab({ stats }) {
   )
 }
 
-function AgencyBlocks({ items, unit }) {
-  return items.map(a => (
-    <div className="agency-block" key={a.agency}>
-      <div className="agency-name">{a.agency}</div>
-      <div className="agency-meta">{a.count} {unit}{a.count !== 1 ? 's' : ''}</div>
-      <ul className="agency-top-charges">
-        {a.topCharges.map(c => <li key={c.name}>{c.name} — {c.count}</li>)}
-      </ul>
-    </div>
-  ))
-}
-
 function AgenciesTab({ stats }) {
-  const score = stats.agencies.map(a => ({ ...a, count: a.chargeCount }))
-  const issaquah = stats.issaquahAgencies.map(a => ({ ...a, count: a.chargeCount }))
-  const kc = stats.kcAgencies
-  const kcItems = kc.agencies.map(a => ({ ...a, count: a.bookingCount }))
+  const { agencies, kcCoverage: kc } = stats.agencies
   return (
     <div>
       <div className="section-note">
-        Arresting agency as each source publishes it, per source — never combined, since the sources name agencies
-        differently. Kent and Kirkland don&apos;t expose this field.
+        Arresting agencies from SCORE, King County DAJD and Issaquah combined, counted per charge. Kent and
+        Kirkland don&apos;t publish this field. The sources name agencies differently (SCORE writes
+        &quot;BELLEVUE&quot;, the county &quot;Bellevue Police&quot;, Issaquah a code), so names are matched up: a city
+        SCORE lists is taken to mean that city&apos;s police. Names that couldn&apos;t be matched are shown as
+        written, including Issaquah codes not yet confirmed.
       </div>
-
-      <div className="section-title">SCORE — counted per charge</div>
-      <div className="section-note">SCORE lists an arresting agency on each charge, so one booking can count toward more than one agency.</div>
-      <HBarList items={score.map(a => ({ name: a.agency, count: a.count }))} />
-      <AgencyBlocks items={score} unit="charge" />
-
-      <div className="section-title">Issaquah — counted per charge</div>
       <div className="section-note">
-        Issaquah lists an arresting agency on each charge, as a code. Codes are translated where the meaning is
-        certain and the code is kept in brackets; codes not yet confirmed are shown as published.
+        SCORE and Issaquah list an agency on each charge. King County lists one per booking, so every charge on a
+        King County booking is counted for that booking&apos;s agency. That&apos;s not always right: on SCORE, about 1 in 8
+        bookings has charges from more than one agency (often a warrant or hold from another jurisdiction). King
+        County&apos;s agency comes from the county&apos;s jail lookup, read since September 26, 2026, and covers{' '}
+        {kc.n.toLocaleString()} of {kc.total.toLocaleString()} King County DAJD bookings
+        {kc.dateRange && <> (booked {fmtDate(kc.dateRange.min)} – {fmtDate(kc.dateRange.max)})</>}.
       </div>
-      {issaquah.length === 0
+      <div className="section-note">
+        Charges are grouped by offense, so the same charge written differently by each source counts once
+        (&quot;THEFT 3RD/FTA&quot;, &quot;Theft 3&quot; and &quot;THEFT 3RD DEG&quot; are all Theft). Assault is split into
+        Assault 4 (misdemeanor) and Assault 1–3 (felony). Charges that fit no group are shown as written.
+      </div>
+      {agencies.length === 0
         ? <div className="empty">No arresting agencies recorded yet.</div>
         : <>
-            <HBarList items={issaquah.map(a => ({ name: a.agency, count: a.count }))} />
-            <AgencyBlocks items={issaquah} unit="charge" />
-          </>}
-
-      <div className="section-title">King County DAJD — counted per booking</div>
-      <div className="section-note">
-        One arresting agency per booking, from the county&apos;s jail lookup, which this site has read since September 26,
-        2026 (the county dataset doesn&apos;t include it). Covers {kc.n.toLocaleString()} of {kc.total.toLocaleString()} King
-        County DAJD bookings
-        {kc.dateRange && <> (booked {fmtDate(kc.dateRange.min)} – {fmtDate(kc.dateRange.max)})</>}. Agencies are shown as the
-        county lists them, including entries like the jail itself or the Department of Corrections. The charges
-        under each agency are every charge on its bookings, assuming the booking&apos;s agency applies to all of them.
-        That&apos;s not always true: on SCORE, which lists an agency per charge, about 1 in 8 bookings has charges from
-        more than one agency (often a warrant or hold from another jurisdiction).
-      </div>
-      {kcItems.length === 0
-        ? <div className="empty">No arresting agencies recorded yet.</div>
-        : <>
-            <HBarList items={kcItems.map(a => ({ name: a.agency, count: a.count }))} />
-            <AgencyBlocks items={kcItems} unit="booking" />
+            <HBarList items={agencies.map(a => ({ name: a.agency, count: a.chargeCount }))} />
+            {agencies.map(a => (
+              <div className="agency-block" key={a.agency}>
+                <div className="agency-name">{a.agency}</div>
+                <div className="agency-meta">
+                  {a.chargeCount} charge{a.chargeCount !== 1 ? 's' : ''}
+                  {a.bySource.map(b => <span key={b.source}> · {sourceLabel(b.source)} {b.count}</span>)}
+                </div>
+                <ul className="agency-top-charges">
+                  {a.groups.map(g => <li key={g.name}>{g.name} — {g.count} ({Math.round((g.count / a.chargeCount) * 100)}%)</li>)}
+                  {a.groupCount > a.groups.length && (
+                    <li className="agency-more">+ {a.groupCount - a.groups.length} more charge group{a.groupCount - a.groups.length !== 1 ? 's' : ''}</li>
+                  )}
+                </ul>
+              </div>
+            ))}
           </>}
     </div>
   )

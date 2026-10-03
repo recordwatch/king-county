@@ -359,6 +359,7 @@ body {
 .agency-meta { font-size: 0.65rem; color: #8B9298; margin: 0.2rem 0 0.4rem; text-transform: uppercase; letter-spacing: 0.06em; }
 .agency-top-charges { list-style: none; padding: 0; margin: 0; font-size: 0.75rem; color: #C9B98F; }
 .agency-top-charges li { padding: 0.15rem 0; }
+.agency-top-charges li.agency-more { color: #8B9298; }
 
 .history-day {
   margin-bottom: 2rem;

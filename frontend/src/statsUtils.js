@@ -283,21 +283,143 @@ function bailStatsFor(entries, unit) {
   }
 }
 
-function perChargeAgencies(entries) {
-  const agencyCharges = {}
-  for (const e of entries || []) {
-    for (const c of e.charges || []) {
-      if (!c.arrestAgency || !c.charge) continue
-      agencyCharges[c.arrestAgency] = agencyCharges[c.arrestAgency] || {}
-      agencyCharges[c.arrestAgency][c.charge] = (agencyCharges[c.arrestAgency][c.charge] || 0) + 1
-    }
+// --- Arresting agencies, combined across sources ---
+//
+// The sources name agencies differently: SCORE by jurisdiction in capitals
+// ("BELLEVUE"), the KC jail lookup as "Bellevue Police", Issaquah as a code
+// we translate ("Issaquah Police (ISS)"). canonicalAgency() maps all three
+// to one name. A SCORE city is assumed to be that city's police; courts and
+// the few names that aren't clearly a police department are aliased or kept
+// as written. Names that match nothing stay as written, so an unmapped name
+// shows up as its own agency rather than being merged by guesswork.
+const AGENCY_ALIASES = {
+  'department of corrections': 'Washington Department of Corrections',
+  'score': 'SCORE (South Correctional Entity)',
+  'south correctional entity (score)': 'SCORE (South Correctional Entity)',
+  'king county sheriffs office': "King County Sheriff's Office",
+  'king county superior': 'King County Superior Court',
+  'king county district': 'King County District Court',
+  'port of seattle': 'Port of Seattle Police',
+  'seatac': 'SeaTac Police',
+}
+// SCORE names that aren't clearly a city police department, kept as written.
+const SCORE_NOT_CITY_POLICE = new Set(['kittitas county', 'thurston', 'muckleshoot', 'pierce county superior court'])
+
+function titleCase(s) {
+  return s.toLowerCase().replace(/\b[a-z]/g, ch => ch.toUpperCase())
+}
+
+export function canonicalAgency(source, raw) {
+  const name = (raw || '').replace(/\s+/g, ' ').trim()
+  if (!name) return null
+  const alias = AGENCY_ALIASES[name.toLowerCase()]
+  if (alias) return alias
+  if (source === 'score') {
+    return SCORE_NOT_CITY_POLICE.has(name.toLowerCase()) ? titleCase(name) : `${titleCase(name)} Police`
   }
-  return Object.entries(agencyCharges)
-    .map(([agency, charges]) => {
-      const chargeCount = Object.values(charges).reduce((a, b) => a + b, 0)
-      return { agency, chargeCount, topCharges: topN(charges, 5) }
-    })
-    .sort((a, b) => b.chargeCount - a.chargeCount)
+  // Issaquah: "Issaquah Police (ISS)" -> "Issaquah Police"; an untranslated
+  // code ("SNO") stays as is.
+  if (source === 'issaquah') return name.replace(/ \([A-Z]+\)$/, '')
+  return name
+}
+
+// Charges grouped by offense, so the same offense written differently by
+// each source counts once ("THEFT 3RD/FTA", "Theft 3", "THEFT 3RD DEG" ->
+// Theft). Checked in order, so a more specific group wins over a general
+// one (Identity Theft before Theft, Vehicular Assault before Assault, order
+// violations before Assault/Harassment, whose words they often contain).
+// Assault keeps the misdemeanor/felony split. A charge matching no group is
+// shown as written, minus suffixes like /FTA.
+const CHARGE_GROUPS = [
+  ['Identity Theft', /IDENTITY THEFT/],
+  ['Vehicle Theft', /THEFT OF (A )?MOTOR VEH|VEHICLE THEFT|VEH(ICLE)? THEFT TOOLS|STOLEN VEH|TAKING (A )?MOTOR VEH|TMVWOP/],
+  ['Robbery', /ROBBERY/],
+  ['Burglary', /BURGLARY/],
+  ['Theft', /THEFT|SHOPLIFT/],
+  ['Stolen Property', /STOLEN PROP/],
+  ['Vehicle Prowling', /VEHICLE PROWL/],
+  ['Vehicular Assault / Homicide', /VEHICULAR (ASSAULT|HOMICIDE)/],
+  ['Protection / No-Contact Order Violation', /VIOL\w*.*(PROT|CONTACT|ORDER|\bORD\b)|(PROTECTION|CONTACT|SODA|SOAP) ORDER VIOL|NO.CONTACT|ANTI.?HARASS/],
+  ['Assault 4', /ASSAULT (4|IV)\b|ASSAULT 4TH|ASSAULT FOURTH/],
+  ['Assault 1–3 (felony)', /ASSAULT ([123]|I{1,3})\b|ASSAULT (1ST|2ND|3RD)|ASSAULT OF A CHILD [123]|CUSTODIAL ASSAULT/],
+  ['Assault (degree not listed)', /ASSAULT/],
+  ['Kidnapping / Unlawful Imprisonment', /KIDNAP|UNLAWFUL IMPRISON/],
+  ['Murder / Manslaughter', /MURDER|MANSLAUGHTER|HOMICIDE/],
+  ['Rape / Sex Offense', /RAPE|MOLEST|INDECENT|SEX/],
+  ['DUI', /\bDUI\b|DRIVING UNDER|PHYSICAL CONTROL/],
+  ['Driving While License Suspended', /DWLS|LICENSE SUSP|DRIVING WHILE (LIC|SUSP)/],
+  ['Ignition Interlock Violation', /INTERLOCK|INTRLCK/],
+  ['Reckless Driving', /RECKLESS DRIVING/],
+  ['Hit and Run', /HIT.{0,5}RUN/],
+  ['Eluding Police', /ELUD/],
+  ['Interfering With a DV Report', /INTERFER\w* .*(DV|DOMESTIC)/],
+  ['Harassment / Stalking', /HARASS|STALK/],
+  ['Trespass', /TRES+PAS+/],
+  ['Malicious Mischief', /MAL\w* MISCH/],
+  ['Arson', /ARSON|RECKLESS BURN/],
+  ['Weapons', /FIREARM|WEAPON|GUN/],
+  ['Drugs', /CONT\w* SUB|VUCSA|NARC|DRUG|METH|HEROIN|FENTANYL|COCAINE/],
+  ['Obstructing / Resisting', /OBSTRUCT|RESIST/],
+  ['Disorderly Conduct', /DISORDERLY/],
+  ['DOC / Probation Violation', /^DOC\b|DOC VIOLATOR|PROBATION|PAROLE|COMMUNITY CUSTODY|ISRB/],
+  ['Escape', /ESCAPE/],
+  ['False Statement / Reporting', /FALSE (STATEMENT|REPORT)/],
+  ['Warrant / Hold', /WARRANT|FUGITIVE|HOLD\b/],
+  ['Court Process (transport order, supervision violation, extradition)', /TRANSPORTATION ORDER|ISSUANCE OF PROCESS|EXTRADITION/],
+]
+
+export function chargeGroup(rawCharge) {
+  const c = (rawCharge || '').toUpperCase().replace(/\s+/g, ' ').trim()
+  if (!c) return null
+  for (const [name, re] of CHARGE_GROUPS) if (re.test(c)) return name
+  return stripSuffix(c)
+}
+
+const AGENCY_SOURCES = ['score', 'kc_dajd', 'issaquah']
+
+// Counted per charge for every source: SCORE and Issaquah publish an agency
+// per charge; KC DAJD publishes one per booking, applied to each of that
+// booking's charges (on SCORE about 1 in 8 bookings mixes agencies, so this
+// isn't always right for KC). KC's agency only exists on bookings the jail
+// lookup has seen (since 2026-09-26) -- kcCoverage says how many.
+function combinedAgencyStats(bySource) {
+  const byAgency = {}
+  function add(source, rawAgency, rawCharge) {
+    const agency = canonicalAgency(source, rawAgency)
+    const group = chargeGroup(rawCharge)
+    if (!agency || !group) return
+    const a = (byAgency[agency.toLowerCase()] = byAgency[agency.toLowerCase()] || { agency, chargeCount: 0, bySource: {}, groups: {} })
+    // Prefer the KC lookup's spelling for the display name, since it writes
+    // agency names in full.
+    if (source === 'kc_dajd') a.agency = agency
+    a.chargeCount++
+    a.bySource[source] = (a.bySource[source] || 0) + 1
+    a.groups[group] = (a.groups[group] || 0) + 1
+  }
+  for (const e of bySource.score || []) for (const c of e.charges || []) add('score', c.arrestAgency, c.charge)
+  for (const e of bySource.issaquah || []) for (const c of e.charges || []) add('issaquah', c.arrestAgency, c.charge)
+  const kcEntries = bySource.kc_dajd || []
+  const kcWithAgency = kcEntries.filter(e => e.arrestingAgency)
+  for (const e of kcWithAgency) for (const c of e.charges || []) add('kc_dajd', e.arrestingAgency, c.charge)
+  const kcDates = kcWithAgency.map(e => parseEntryDate(e.source, e.bookingDate || e.firstSeen)).filter(d => !isNaN(d.getTime()))
+  const agencies = Object.values(byAgency)
+    .map(a => ({
+      agency: a.agency,
+      chargeCount: a.chargeCount,
+      bySource: AGENCY_SOURCES.filter(id => a.bySource[id]).map(id => ({ source: id, count: a.bySource[id] })),
+      groups: topN(a.groups, 8),
+      groupCount: Object.keys(a.groups).length,
+    }))
+    .sort((x, y) => y.chargeCount - x.chargeCount)
+  return {
+    agencies,
+    chargeCount: agencies.reduce((n, a) => n + a.chargeCount, 0),
+    kcCoverage: {
+      n: kcWithAgency.length,
+      total: kcEntries.length,
+      dateRange: kcDates.length ? { min: new Date(Math.min(...kcDates)), max: new Date(Math.max(...kcDates)) } : null,
+    },
+  }
 }
 
 export function computeStats(log) {
@@ -380,34 +502,9 @@ export function computeStats(log) {
   // --- Bail (per source only -- never combined, see file header) ---
   const bail = sourceIds.map(id => ({ source: id, ...bailStatsFor(bySource[id], BAIL_UNIT[id]) }))
 
-  // --- Agencies, per source, never combined (the sources name agencies
-  // differently: SCORE "BELLEVUE", KC DAJD "Bellevue Police", Issaquah
-  // "Issaquah Police (ISS)"). SCORE and Issaquah publish one per charge, so
-  // they're counted per charge; KC DAJD publishes one per booking (from the
-  // jail lookup), so it's counted per booking. ---
-  const agencies = perChargeAgencies(bySource.score)
-  const issaquahAgencies = perChargeAgencies(bySource.issaquah)
-
-  // KC DAJD's arrestingAgency only exists on bookings the jail lookup has
-  // seen (read since 2026-09-26) -- the county dataset has none -- so this
-  // covers those bookings only; total and date range say how many.
-  const kcEntries = bySource.kc_dajd || []
-  const kcWithAgency = kcEntries.filter(e => e.arrestingAgency)
-  const kcAgencyMap = {}
-  for (const e of kcWithAgency) {
-    const a = (kcAgencyMap[e.arrestingAgency] = kcAgencyMap[e.arrestingAgency] || { bookingCount: 0, charges: {} })
-    a.bookingCount++
-    for (const c of e.charges || []) if (c.charge) a.charges[c.charge] = (a.charges[c.charge] || 0) + 1
-  }
-  const kcDates = kcWithAgency.map(e => parseEntryDate(e.source, e.bookingDate || e.firstSeen)).filter(d => !isNaN(d.getTime()))
-  const kcAgencies = {
-    n: kcWithAgency.length,
-    total: kcEntries.length,
-    dateRange: kcDates.length ? { min: new Date(Math.min(...kcDates)), max: new Date(Math.max(...kcDates)) } : null,
-    agencies: Object.entries(kcAgencyMap)
-      .map(([agency, a]) => ({ agency, bookingCount: a.bookingCount, topCharges: topN(a.charges, 5) }))
-      .sort((x, y) => y.bookingCount - x.bookingCount),
-  }
+  // --- Arresting agencies, combined across SCORE, KC DAJD and Issaquah
+  // (see combinedAgencyStats). Kent and Kirkland publish none. ---
+  const agencies = combinedAgencyStats(bySource)
 
   // --- Detention duration by category (per source, county-verified releases only) ---
   const detention = {}
@@ -479,5 +576,5 @@ export function computeStats(log) {
     kc_dajd: null,
   }
 
-  return { totals, trends, crimeTypes, stayLength, releaseReasons, bail, agencies, issaquahAgencies, kcAgencies, detention, repeatRates }
+  return { totals, trends, crimeTypes, stayLength, releaseReasons, bail, agencies, detention, repeatRates }
 }
