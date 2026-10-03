@@ -360,9 +360,10 @@ export function computeStats(log) {
   // --- Bail (per source only -- never combined, see file header) ---
   const bail = sourceIds.map(id => ({ source: id, ...bailStatsFor(bySource[id], BAIL_UNIT[id]) }))
 
-  // --- Agencies (SCORE only -- the only source with an arresting agency per
-  // charge, see scrapers/score.js. KC DAJD's is per booking, not counted
-  // here) ---
+  // --- Agencies, per source, never combined (the sources name agencies
+  // differently: SCORE "BELLEVUE", KC DAJD "Bellevue Police"). SCORE
+  // publishes one per charge, so it's counted per charge; KC DAJD publishes
+  // one per booking (from the jail lookup), so it's counted per booking. ---
   const agencyCharges = {}
   for (const e of bySource.score || []) {
     for (const c of e.charges || []) {
@@ -377,6 +378,27 @@ export function computeStats(log) {
       return { agency, chargeCount, topCharges: topN(charges, 5) }
     })
     .sort((a, b) => b.chargeCount - a.chargeCount)
+
+  // KC DAJD's arrestingAgency only exists on bookings the jail lookup has
+  // seen (read since 2026-09-26) -- the county dataset has none -- so this
+  // covers those bookings only; total and date range say how many.
+  const kcEntries = bySource.kc_dajd || []
+  const kcWithAgency = kcEntries.filter(e => e.arrestingAgency)
+  const kcAgencyMap = {}
+  for (const e of kcWithAgency) {
+    const a = (kcAgencyMap[e.arrestingAgency] = kcAgencyMap[e.arrestingAgency] || { bookingCount: 0, charges: {} })
+    a.bookingCount++
+    for (const c of e.charges || []) if (c.charge) a.charges[c.charge] = (a.charges[c.charge] || 0) + 1
+  }
+  const kcDates = kcWithAgency.map(e => parseEntryDate(e.source, e.bookingDate || e.firstSeen)).filter(d => !isNaN(d.getTime()))
+  const kcAgencies = {
+    n: kcWithAgency.length,
+    total: kcEntries.length,
+    dateRange: kcDates.length ? { min: new Date(Math.min(...kcDates)), max: new Date(Math.max(...kcDates)) } : null,
+    agencies: Object.entries(kcAgencyMap)
+      .map(([agency, a]) => ({ agency, bookingCount: a.bookingCount, topCharges: topN(a.charges, 5) }))
+      .sort((x, y) => y.bookingCount - x.bookingCount),
+  }
 
   // --- Detention duration by category (per source, county-verified releases only) ---
   const detention = {}
@@ -447,5 +469,5 @@ export function computeStats(log) {
     kc_dajd: null,
   }
 
-  return { totals, trends, crimeTypes, stayLength, releaseReasons, bail, agencies, detention, repeatRates }
+  return { totals, trends, crimeTypes, stayLength, releaseReasons, bail, agencies, kcAgencies, detention, repeatRates }
 }
