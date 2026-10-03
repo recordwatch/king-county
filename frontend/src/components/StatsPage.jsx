@@ -335,20 +335,51 @@ function BailTab({ stats }) {
   )
 }
 
+function AgencyBlocks({ items, unit }) {
+  return items.map(a => (
+    <div className="agency-block" key={a.agency}>
+      <div className="agency-name">{a.agency}</div>
+      <div className="agency-meta">{a.count} {unit}{a.count !== 1 ? 's' : ''}</div>
+      <ul className="agency-top-charges">
+        {a.topCharges.map(c => <li key={c.name}>{c.name} — {c.count}</li>)}
+      </ul>
+    </div>
+  ))
+}
+
 function AgenciesTab({ stats }) {
+  const score = stats.agencies.map(a => ({ ...a, count: a.chargeCount }))
+  const kc = stats.kcAgencies
+  const kcItems = kc.agencies.map(a => ({ ...a, count: a.bookingCount }))
   return (
     <div>
-      <div className="section-note">SCORE publishes an arresting agency on each charge, and King County DAJD publishes one per booking (shown on its booking cards). Only SCORE's per-charge agencies are counted below. Kent and Kirkland don't expose this field.</div>
-      <HBarList items={stats.agencies.map(a => ({ name: a.agency, count: a.chargeCount }))} />
-      {stats.agencies.map(a => (
-        <div className="agency-block" key={a.agency}>
-          <div className="agency-name">{a.agency}</div>
-          <div className="agency-meta">{a.chargeCount} charge{a.chargeCount !== 1 ? 's' : ''}</div>
-          <ul className="agency-top-charges">
-            {a.topCharges.map(c => <li key={c.name}>{c.name} — {c.count}</li>)}
-          </ul>
-        </div>
-      ))}
+      <div className="section-note">
+        Arresting agency as each source publishes it, per source — never combined, since the sources name agencies
+        differently. Kent and Kirkland don&apos;t expose this field.
+      </div>
+
+      <div className="section-title">SCORE — counted per charge</div>
+      <div className="section-note">SCORE lists an arresting agency on each charge, so one booking can count toward more than one agency.</div>
+      <HBarList items={score.map(a => ({ name: a.agency, count: a.count }))} />
+      <AgencyBlocks items={score} unit="charge" />
+
+      <div className="section-title">King County DAJD — counted per booking</div>
+      <div className="section-note">
+        One arresting agency per booking, from the county&apos;s jail lookup, which this site has read since September 26,
+        2026 (the county dataset doesn&apos;t include it). Covers {kc.n.toLocaleString()} of {kc.total.toLocaleString()} King
+        County DAJD bookings
+        {kc.dateRange && <> (booked {fmtDate(kc.dateRange.min)} – {fmtDate(kc.dateRange.max)})</>}. Agencies are shown as the
+        county lists them, including entries like the jail itself or the Department of Corrections. The charges
+        under each agency are every charge on its bookings, assuming the booking&apos;s agency applies to all of them.
+        That&apos;s not always true: on SCORE, which lists an agency per charge, about 1 in 8 bookings has charges from
+        more than one agency (often a warrant or hold from another jurisdiction).
+      </div>
+      {kcItems.length === 0
+        ? <div className="empty">No arresting agencies recorded yet.</div>
+        : <>
+            <HBarList items={kcItems.map(a => ({ name: a.agency, count: a.count }))} />
+            <AgencyBlocks items={kcItems} unit="booking" />
+          </>}
     </div>
   )
 }
