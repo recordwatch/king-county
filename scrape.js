@@ -10,6 +10,7 @@ import * as kcdajd from './scrapers/kcdajd.js';
 import * as score from './scrapers/score.js';
 import * as kent from './scrapers/kent.js';
 import * as kirkland from './scrapers/kirkland.js';
+import * as issaquah from './scrapers/issaquah.js';
 import * as wadoc from './scrapers/wadoc.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -20,7 +21,7 @@ const DATA_DIR = path.join(__dirname, 'data');
 // SCORE's rebuild windows and short outages at SCORE and NORCOM (Kirkland) --
 // 90 minutes on 2026-09-29 -- would otherwise turn every run red for
 // something that fixes itself, while a source down for hours still does.
-// Only the three live sources get it: KC DAJD's status.json is also
+// Only the live sources get it: KC DAJD's status.json is also
 // refreshed by the portal every 2 hours, so its lastUpdated doesn't say
 // whether the daily Socrata sync worked.
 const LIVE_FAILURE_GRACE_HOURS = 2;
@@ -64,6 +65,16 @@ const SOURCES = {
     detailBatchLimit: 20,
     backfillBatch: 30,
   },
+  issaquah: {
+    sourceId: 'issaquah',
+    failureGraceHours: LIVE_FAILURE_GRACE_HOURS,
+    label: 'Issaquah',
+    dataDir: path.join(DATA_DIR, 'issaquah'),
+    // Charges are inline on the roster page -- no detail fetch. Releases has
+    // no times, only confirms a release (see scrapers/issaquah.js).
+    fetchRoster: issaquah.scrapeRoster,
+    fetchReleaseTimes: issaquah.fetchReleaseTimes,
+  },
   kcdajd: {
     sourceId: 'kc_dajd',
     label: 'King County DAJD',
@@ -99,7 +110,7 @@ async function runWADOC() {
 
 async function main() {
   const arg = process.argv[2] || 'all';
-  const keys = arg === 'all' ? ['score', 'kent', 'kirkland'] : arg.split(',');
+  const keys = arg === 'all' ? ['score', 'kent', 'kirkland', 'issaquah'] : arg.split(',');
 
   if (keys.includes('wadoc')) {
     await runWADOC();

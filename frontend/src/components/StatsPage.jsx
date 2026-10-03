@@ -168,8 +168,8 @@ function ReleasedWithBail({ stats }) {
         Uses each source&apos;s published release reason, not whether bail was set — bail being set doesn&apos;t
         mean the person paid it. SCORE: release type &quot;RELEASED - CASH BAIL OR BOND&quot; from the person&apos;s
         booking list. King County DAJD: county dataset release reasons &quot;Bail&quot; or &quot;Bond&quot; (release on
-        personal recognizance is not counted as bail). Kent and Kirkland publish no release reason, so no
-        percentage is shown for them.
+        personal recognizance is not counted as bail). Kent, Kirkland and Issaquah publish no release reason, so
+        no percentage is shown for them.
       </div>
       <table className="stats-table">
         <thead><tr><th>Source</th><th>Method</th><th>Bail/bond</th><th>n</th><th>%</th></tr></thead>
@@ -270,7 +270,7 @@ function CrimeTypesTab({ stats }) {
       <HBarList items={severities} />
 
       <div className="section-title">Most Common Charges</div>
-      <div className="section-note">Raw charge text as booked — not normalized across the 4 sources.</div>
+      <div className="section-note">Raw charge text as booked — not normalized across the 5 sources.</div>
       <HBarList items={topOffenses} />
     </div>
   )
@@ -325,7 +325,8 @@ function BailTab({ stats }) {
         whole booking (copied onto every charge in our data), so it's counted once per booking here. SCORE and Kent
         both publish a genuine bail figure per charge, so those are counted per charge. King County DAJD&apos;s county
         dataset has no bail field; bail from the county&apos;s jail lookup is shown on booking cards but isn&apos;t
-        counted in the bail amounts below yet.
+        counted in the bail amounts below yet. Issaquah lists a bond amount per charge and is counted per charge,
+        though some bookings repeat the same amount on every charge, which may be a total.
       </div>
       <ReleasedWithBail stats={stats} />
       <ReleaseReasonsSection stats={stats} />
@@ -349,6 +350,7 @@ function AgencyBlocks({ items, unit }) {
 
 function AgenciesTab({ stats }) {
   const score = stats.agencies.map(a => ({ ...a, count: a.chargeCount }))
+  const issaquah = stats.issaquahAgencies.map(a => ({ ...a, count: a.chargeCount }))
   const kc = stats.kcAgencies
   const kcItems = kc.agencies.map(a => ({ ...a, count: a.bookingCount }))
   return (
@@ -362,6 +364,18 @@ function AgenciesTab({ stats }) {
       <div className="section-note">SCORE lists an arresting agency on each charge, so one booking can count toward more than one agency.</div>
       <HBarList items={score.map(a => ({ name: a.agency, count: a.count }))} />
       <AgencyBlocks items={score} unit="charge" />
+
+      <div className="section-title">Issaquah — counted per charge</div>
+      <div className="section-note">
+        Issaquah lists an arresting agency on each charge, as a code. Codes are translated where the meaning is
+        certain and the code is kept in brackets; codes not yet confirmed are shown as published.
+      </div>
+      {issaquah.length === 0
+        ? <div className="empty">No arresting agencies recorded yet.</div>
+        : <>
+            <HBarList items={issaquah.map(a => ({ name: a.agency, count: a.count }))} />
+            <AgencyBlocks items={issaquah} unit="charge" />
+          </>}
 
       <div className="section-title">King County DAJD — counted per booking</div>
       <div className="section-note">
@@ -430,13 +444,13 @@ function DetentionTab({ stats }) {
 function RepeatBookingsTab({ stats }) {
   const { repeatRates } = stats
   const available = ['score', 'kent']
-  const unavailable = ['kirkland', 'kc_dajd']
+  const unavailable = ['kirkland', 'issaquah', 'kc_dajd']
   return (
     <div>
       <div className="section-note">
         Definition: had another booking at this same jail in the 12 months before this booking.
         These are within-jail rates — bookings at other jails in this dataset are not counted.
-        Kirkland and King County DAJD don't publish booking history data.
+        Kirkland, Issaquah and King County DAJD don't publish booking history data.
       </div>
       {available.map(id => {
         const r = repeatRates[id]

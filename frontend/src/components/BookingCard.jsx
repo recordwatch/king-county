@@ -80,7 +80,8 @@ export default function BookingCard({ entry }) {
             <span className="source-badge">{sourceLabel(entry.source)}</span>
           </div>
           <div className="card-meta">
-            Booking #{entry.bookingNumber} &nbsp;·&nbsp; Booked: {displayEntryDate(entry.source, entry.bookingDate || entry.firstSeen)}
+            {/* Issaquah publishes no booking number, only a per-person number. */}
+            {entry.bookingNumber ? `Booking #${entry.bookingNumber}` : entry.personNumber ? `Person #${entry.personNumber}` : 'No booking number'} &nbsp;·&nbsp; Booked: {displayEntryDate(entry.source, entry.bookingDate || entry.firstSeen)}
             {entry.facility && <span> &nbsp;·&nbsp; {entry.facility}</span>}
             {timeHeld && <span className="card-time-held"> &nbsp;·&nbsp; Held: {timeHeld}</span>}
           </div>

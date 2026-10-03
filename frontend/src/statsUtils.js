@@ -1,6 +1,6 @@
 // Stats helpers for the unlisted Deep Stats page.
 // Charge category/severity are best-effort classifications from raw charge
-// text (no structured charge-class field exists in any of the 4 sources).
+// text (no structured charge-class field exists in any of the 5 sources).
 //
 // Cross-source rules (do not violate without re-reading these comments):
 // - Stay length and bail must never be combined across sources -- each
@@ -125,7 +125,7 @@ function stayStatsFor(entries) {
   return { n: stays.length, avgDays: mean(stays), medianDays: median(stays) }
 }
 
-// --- Published release reasons (SCORE and KC DAJD only; Kent and Kirkland
+// --- Published release reasons (SCORE and KC DAJD only; Kent, Kirkland and Issaquah
 // publish none) ---
 //
 // SCORE: every Release Type on the person's Booking List rows for this
@@ -235,7 +235,10 @@ const RELEASE_REASON_SOURCES = ['score', 'kc_dajd']
 // booking. SCORE and Kent both publish a genuine per-charge bail/bond
 // amount, so those two are counted per charge. KC DAJD's feed has no
 // bail/bond field at all (confirmed against its raw schema).
-const BAIL_UNIT = { score: 'charge', kent: 'charge', kirkland: 'booking', kc_dajd: null }
+// Issaquah: per charge too, though some bookings repeat one amount on every
+// charge of a citation (2026-10-03: BRADLEY, $5,050 x4 across 2 citations),
+// which may be a total rather than a per-charge figure.
+const BAIL_UNIT = { score: 'charge', kent: 'charge', kirkland: 'booking', issaquah: 'charge', kc_dajd: null }
 
 function bailStatsFor(entries, unit) {
   if (!unit) return { unit: null, n: 0, median: null, mean: null, max: null, byCategory: [] }
@@ -278,6 +281,23 @@ function bailStatsFor(entries, unit) {
       .map(([category, vals]) => ({ category, median: median(vals), mean: mean(vals), n: vals.length }))
       .sort((a, b) => b.median - a.median),
   }
+}
+
+function perChargeAgencies(entries) {
+  const agencyCharges = {}
+  for (const e of entries || []) {
+    for (const c of e.charges || []) {
+      if (!c.arrestAgency || !c.charge) continue
+      agencyCharges[c.arrestAgency] = agencyCharges[c.arrestAgency] || {}
+      agencyCharges[c.arrestAgency][c.charge] = (agencyCharges[c.arrestAgency][c.charge] || 0) + 1
+    }
+  }
+  return Object.entries(agencyCharges)
+    .map(([agency, charges]) => {
+      const chargeCount = Object.values(charges).reduce((a, b) => a + b, 0)
+      return { agency, chargeCount, topCharges: topN(charges, 5) }
+    })
+    .sort((a, b) => b.chargeCount - a.chargeCount)
 }
 
 export function computeStats(log) {
@@ -361,23 +381,12 @@ export function computeStats(log) {
   const bail = sourceIds.map(id => ({ source: id, ...bailStatsFor(bySource[id], BAIL_UNIT[id]) }))
 
   // --- Agencies, per source, never combined (the sources name agencies
-  // differently: SCORE "BELLEVUE", KC DAJD "Bellevue Police"). SCORE
-  // publishes one per charge, so it's counted per charge; KC DAJD publishes
-  // one per booking (from the jail lookup), so it's counted per booking. ---
-  const agencyCharges = {}
-  for (const e of bySource.score || []) {
-    for (const c of e.charges || []) {
-      if (!c.arrestAgency || !c.charge) continue
-      agencyCharges[c.arrestAgency] = agencyCharges[c.arrestAgency] || {}
-      agencyCharges[c.arrestAgency][c.charge] = (agencyCharges[c.arrestAgency][c.charge] || 0) + 1
-    }
-  }
-  const agencies = Object.entries(agencyCharges)
-    .map(([agency, charges]) => {
-      const chargeCount = Object.values(charges).reduce((a, b) => a + b, 0)
-      return { agency, chargeCount, topCharges: topN(charges, 5) }
-    })
-    .sort((a, b) => b.chargeCount - a.chargeCount)
+  // differently: SCORE "BELLEVUE", KC DAJD "Bellevue Police", Issaquah
+  // "Issaquah Police (ISS)"). SCORE and Issaquah publish one per charge, so
+  // they're counted per charge; KC DAJD publishes one per booking (from the
+  // jail lookup), so it's counted per booking. ---
+  const agencies = perChargeAgencies(bySource.score)
+  const issaquahAgencies = perChargeAgencies(bySource.issaquah)
 
   // KC DAJD's arrestingAgency only exists on bookings the jail lookup has
   // seen (read since 2026-09-26) -- the county dataset has none -- so this
@@ -466,8 +475,9 @@ export function computeStats(log) {
     score: repeatRateFor(bySource.score || [], 'bookingHistory', 'dateBooked', 'bookingNumber'),
     kent: repeatRateFor(bySource.kent || [], 'priorBookings', 'bookedDate', 'bookingNumber'),
     kirkland: null,
+    issaquah: null,
     kc_dajd: null,
   }
 
-  return { totals, trends, crimeTypes, stayLength, releaseReasons, bail, agencies, kcAgencies, detention, repeatRates }
+  return { totals, trends, crimeTypes, stayLength, releaseReasons, bail, agencies, issaquahAgencies, kcAgencies, detention, repeatRates }
 }
