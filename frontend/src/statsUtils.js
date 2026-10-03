@@ -486,7 +486,10 @@ export function computeStats(log) {
       if (!c.charge) continue
       cats.add(categorizeCharge(c.charge))
       severityCounts[classifySeverity(c.charge)] = (severityCounts[classifySeverity(c.charge)] || 0) + 1
-      offenseCounts[c.charge] = (offenseCounts[c.charge] || 0) + 1
+      // Grouped by offense (chargeGroup), so one offense written differently
+      // by each source counts once.
+      const group = chargeGroup(c.charge)
+      if (group) offenseCounts[group] = (offenseCounts[group] || 0) + 1
     }
     for (const cat of cats) categoryCounts[cat] = (categoryCounts[cat] || 0) + 1
   }

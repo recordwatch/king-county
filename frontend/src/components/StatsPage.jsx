@@ -270,7 +270,12 @@ function CrimeTypesTab({ stats }) {
       <HBarList items={severities} />
 
       <div className="section-title">Most Common Charges</div>
-      <div className="section-note">Raw charge text as booked — not normalized across the 5 sources.</div>
+      <div className="section-note">
+        Every charge across all 5 sources, grouped by offense so the same charge written differently by each source
+        counts once (&quot;THEFT 3RD/FTA&quot;, &quot;Theft 3&quot; and &quot;THEFT 3RD DEG&quot; are all Theft) — the same groups as
+        the Agencies tab. Assault is split into Assault 4 (misdemeanor) and Assault 1–3 (felony). Charges that fit no
+        group are shown as written.
+      </div>
       <HBarList items={topOffenses} />
     </div>
   )
