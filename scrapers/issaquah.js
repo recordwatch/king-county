@@ -181,7 +181,11 @@ export function checkRosterVersion(dataDir, lastModified) {
   }
   const prev = Date.parse(readState(dataDir).rosterLastModified ?? '');
   if (!Number.isNaN(prev) && lastModified < prev) {
-    throw new Error(`only got a roster copy from ${new Date(lastModified).toISOString()}, older than last run's ${new Date(prev).toISOString()} (stale CDN copy)`);
+    const err = new Error(`only got a roster copy from ${new Date(lastModified).toISOString()}, older than last run's ${new Date(prev).toISOString()} (stale CDN copy)`);
+    // The site answered, just with an old copy: runScraper reports this as
+    // 'stale', which gets a longer grace period than a real outage.
+    err.staleCopy = true;
+    throw err;
   }
   fs.mkdirSync(dataDir, { recursive: true });
   fs.writeFileSync(path.join(dataDir, STATE_FILE), JSON.stringify({ rosterLastModified: new Date(lastModified).toISOString() }, null, 2) + '\n');

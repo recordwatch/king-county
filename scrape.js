@@ -25,6 +25,11 @@ const DATA_DIR = path.join(__dirname, 'data');
 // refreshed by the portal every 2 hours, so its lastUpdated doesn't say
 // whether the daily Socrata sync worked.
 const LIVE_FAILURE_GRACE_HOURS = 2;
+// A source that answered but only with an old copy (Issaquah's CDN, see
+// scrapers/issaquah.js) gets longer: nothing is wrong with the data, it's
+// just not updating, and that cache can stay stuck for hours (21 red runs
+// on 2026-10-03/04). A real outage at the same source still gets 2 hours.
+const STALE_COPY_GRACE_HOURS = 6;
 
 const SOURCES = {
   score: {
@@ -68,6 +73,7 @@ const SOURCES = {
   issaquah: {
     sourceId: 'issaquah',
     failureGraceHours: LIVE_FAILURE_GRACE_HOURS,
+    staleGraceHours: STALE_COPY_GRACE_HOURS,
     label: 'Issaquah',
     dataDir: path.join(DATA_DIR, 'issaquah'),
     // Charges are inline on the roster page -- no detail fetch. Releases has
@@ -160,10 +166,11 @@ export function failureVerdict(config, result, now = new Date()) {
   if (!last) return { level: 'error', text: `${where} (no previous successful update on record)` };
   const hours = (now - last) / 3600000;
   const since = `last successful update ${hours.toFixed(1)}h ago (${lastUpdated} Pacific)`;
-  if (hours <= config.failureGraceHours) {
-    return { level: 'warning', text: `${where} -- ${since}; not failing the run until it's been over ${config.failureGraceHours}h` };
+  const grace = result.failed === 'stale' && config.staleGraceHours ? config.staleGraceHours : config.failureGraceHours;
+  if (hours <= grace) {
+    return { level: 'warning', text: `${where} -- ${since}; not failing the run until it's been over ${grace}h` };
   }
-  return { level: 'error', text: `${where} -- ${since}, over the ${config.failureGraceHours}h limit` };
+  return { level: 'error', text: `${where} -- ${since}, over the ${grace}h limit` };
 }
 
 function reportFailure(config, result) {
