@@ -31,8 +31,17 @@ import * as cheerio from 'cheerio';
 // ENCODINGS and the copy with the newest Last-Modified is used, and the
 // roster's Last-Modified is kept in page_state.json: a roster older than the
 // one used last run is a fetch failure, never diffed.
+//
+// The roster is read from /jail/index.html, not /jail/: the CDN caches them
+// as different URLs, and /jail/ is far staler. Measured 2026-10-03 18:00 UTC
+// (12 requests each, across the 4 encodings): /jail/ returned the current
+// copy 0 times, some copies nearly 2 days old; /jail/index.html returned it
+// 9 times, the rest 4 hours old. From GitHub's runners, /jail/ gave only the
+// 03:00 UTC copy on 8 of 8 tries for hours at a time, so the staleness check
+// below failed every run and the roster froze. A random query string doesn't
+// help: the CDN ignores it.
 const BASE_URL = 'https://jailroster.issaquahwa.gov/jail';
-const ROSTER_URL = `${BASE_URL}/`;
+const ROSTER_URL = `${BASE_URL}/index.html`;
 const RELEASES_URL = `${BASE_URL}/releases.html`;
 
 export const FACILITY_LABEL = 'Issaquah City Jail';
