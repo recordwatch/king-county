@@ -40,6 +40,14 @@ import * as cheerio from 'cheerio';
 // 03:00 UTC copy on 8 of 8 tries for hours at a time, so the staleness check
 // below failed every run and the roster froze. A random query string doesn't
 // help: the CDN ignores it.
+//
+// Issaquah's own page sometimes leaves someone out for one update and lists
+// them again on the next (3 times 2026-10-06..20, none on Releases), which
+// made 3 false releases and reversals. So someone missing from the roster
+// who isn't on Releases is held as in custody until a second, newer page
+// (later Last-Modified) also leaves them out; page_state.json's `held` maps
+// each held booking to the first page that left them out. Someone listed on
+// Releases, or rebooked under a new booked-at, is released right away.
 const BASE_URL = 'https://jailroster.issaquahwa.gov/jail';
 const ROSTER_URL = `${BASE_URL}/index.html`;
 const RELEASES_URL = `${BASE_URL}/releases.html`;
@@ -162,6 +170,11 @@ export async function fetchNewest(url, fetchOne = get) {
   return best;
 }
 
+function writeState(dataDir, patch) {
+  fs.mkdirSync(dataDir, { recursive: true });
+  fs.writeFileSync(path.join(dataDir, STATE_FILE), JSON.stringify({ ...readState(dataDir), ...patch }, null, 2) + '\n');
+}
+
 function readState(dataDir) {
   try {
     return JSON.parse(fs.readFileSync(path.join(dataDir, STATE_FILE), 'utf8'));
@@ -187,11 +200,58 @@ export function checkRosterVersion(dataDir, lastModified) {
     err.staleCopy = true;
     throw err;
   }
-  fs.mkdirSync(dataDir, { recursive: true });
-  fs.writeFileSync(path.join(dataDir, STATE_FILE), JSON.stringify({ rosterLastModified: new Date(lastModified).toISOString() }, null, 2) + '\n');
+  writeState(dataDir, { rosterLastModified: new Date(lastModified).toISOString() });
 }
 
-export async function scrapeRoster({ dataDir } = {}) {
+// Bookings still in custody in `roster` but missing from this page, decided
+// one by one (see the header): returns the ones to keep as in custody this
+// run, and records `held` in page_state.json. `releasedIds` is the set of
+// booking ids on Releases (null if that page couldn't be read: nobody counts
+// as confirmed then).
+export function holdMissing({ roster, records, lastModified, releasedIds, dataDir }) {
+  const present = new Set(records.map(r => r.idnum));
+  const presentPeople = new Set(records.map(r => r.personNumber));
+  const prevHeld = (dataDir && readState(dataDir).held) || {};
+  const held = {};
+  const keep = [];
+  for (const e of Object.values(roster || {})) {
+    if (e.status !== 'in_custody' || present.has(e.idnum)) continue;
+    // Released right away: confirmed on Releases, rebooked under a new
+    // booked-at, or no Last-Modified to tell a newer page by.
+    const releaseNow = releasedIds?.has(e.idnum) || presentPeople.has(e.personNumber) || lastModified === null;
+    if (releaseNow) continue;
+    const since = Date.parse(prevHeld[e.idnum] ?? '');
+    if (!Number.isNaN(since) && lastModified > since) {
+      console.log(`  Issaquah: ${e.name} still missing from a newer page, releasing`);
+      continue;
+    }
+    held[e.idnum] = Number.isNaN(since) ? new Date(lastModified).toISOString() : prevHeld[e.idnum];
+    console.log(`  Issaquah: ${e.name} missing from the roster but not on Releases; holding until a newer page`);
+    keep.push({
+      idnum: e.idnum,
+      personNumber: e.personNumber,
+      bookingNumber: null,
+      name: e.name,
+      facility: e.facility,
+      bookingDate: e.bookingDate,
+      charges: e.charges,
+    });
+  }
+  if (dataDir) writeState(dataDir, { held });
+  return keep;
+}
+
+async function releasedBookingIds() {
+  try {
+    const people = parsePage((await fetchNewest(RELEASES_URL)).html);
+    return new Set(people.map(p => bookingId(p.personNumber, p.bookedRaw)).filter(Boolean));
+  } catch (err) {
+    console.warn(`  Issaquah: couldn't read Releases (${err.message}); nobody missing counts as confirmed`);
+    return null;
+  }
+}
+
+export async function scrapeRoster({ roster, dataDir } = {}) {
   const page = await fetchNewest(ROSTER_URL);
   checkRosterVersion(dataDir, page.lastModified);
   const people = parsePage(page.html);
@@ -212,7 +272,9 @@ export async function scrapeRoster({ dataDir } = {}) {
       charges: p.charges,
     });
   }
-  return records;
+  const missing = Object.values(roster || {}).some(e => e.status === 'in_custody' && !records.some(r => r.idnum === e.idnum));
+  const releasedIds = missing ? await releasedBookingIds() : new Set();
+  return records.concat(holdMissing({ roster, records, lastModified: page.lastModified, releasedIds, dataDir }));
 }
 
 // Called by runScraper for bookings that just left the roster. Returns a
