@@ -69,7 +69,10 @@ export default function BookingCard({ entry }) {
   // approximate, so the duration built from them is labeled as such.
   const timeHeld = rawTimeHeld && entry.releaseSource !== 'county' ? `about ${rawTimeHeld}` : rawTimeHeld
   const lagNote = entryLagNote(entry)
-  const history = HISTORY_NOTE[entry.source] && entry.bookingHistory ? mergeHistoryRows(entry.bookingHistory) : []
+  // Earlier bookings only: the top of the card already is this booking.
+  const history = HISTORY_NOTE[entry.source] && entry.bookingHistory
+    ? mergeHistoryRows(entry.bookingHistory.filter(b => b.bookingNumber !== entry.bookingNumber))
+    : []
 
   return (
     <div className={`card ${isReleased ? 'card-released' : 'card-custody'}`}>
@@ -141,7 +144,7 @@ export default function BookingCard({ entry }) {
 
           {entry.priorBookings && entry.priorBookings.length > 0 && (
             <div className="card-history">
-              <div className="charges-title">Booking History ({entry.priorBookings.length} prior)</div>
+              <div className="charges-title">Booking History</div>
               {entry.priorBookings.map((b, i) => (
                 <div key={i} className="prior-booking">
                   <div className="prior-booking-header">
@@ -154,15 +157,13 @@ export default function BookingCard({ entry }) {
             </div>
           )}
 
-          {/* SCORE's and KC DAJD's bookingHistory. KC's always lists the
-              current booking; SCORE's usually doesn't until the person is
-              released, so the heading checks. KC's rows carry an arrest time
-              and booking status; SCORE's a booked time and release type. */}
+          {/* SCORE's and KC DAJD's bookingHistory, without this card's own
+              booking (KC always lists it; SCORE once it's released). Hidden
+              when no earlier booking is left. KC's rows carry an arrest
+              time; SCORE's a booked time and release type. */}
           {history.length > 0 && (
             <div className="card-history">
-              <div className="charges-title">
-                Booking History ({history.length}{history.some(b => b.bookingNumber === entry.bookingNumber) ? ', including this one' : ' prior'})
-              </div>
+              <div className="charges-title">Booking History</div>
               <div className="card-history-note">{HISTORY_NOTE[entry.source]}</div>
               {history.map((b, i) => (
                 <div key={i} className="prior-booking">
@@ -170,9 +171,7 @@ export default function BookingCard({ entry }) {
                     Booking #{b.bookingNumber}
                     {b.dateBooked && <span> &nbsp;·&nbsp; Booked: {b.dateBooked}</span>}
                     {b.dateArrested && <span> &nbsp;·&nbsp; Arrested: {displayEntryDate(entry.source, b.dateArrested)}</span>}
-                    {b.dateReleased
-                      ? <span> &nbsp;·&nbsp; Released: {displayEntryDate(entry.source, b.dateReleased)}</span>
-                      : b.bookingStatus === 'Booked' && <span> &nbsp;·&nbsp; Still booked</span>}
+                    {b.dateReleased && <span> &nbsp;·&nbsp; Released: {displayEntryDate(entry.source, b.dateReleased)}</span>}
                     {b.releaseTypes.length > 0 && <span> &nbsp;·&nbsp; {b.releaseTypes.join(' / ')}</span>}
                   </div>
                 </div>
